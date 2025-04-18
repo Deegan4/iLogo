@@ -1,6 +1,6 @@
+import { DashboardContent } from "@/components/dashboard/dashboard-content"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { DashboardContent } from "@/components/dashboard/dashboard-content"
 
 export default async function DashboardPage() {
   const supabase = createClient()

@@ -12,6 +12,8 @@ import { LogoEditor } from "@/components/logo-editor"
 import { ExportOptions } from "@/components/export-options"
 import { ShareLogo } from "@/components/share-logo"
 import type { Database } from "@/lib/database.types"
+import { LogoImage } from "@/components/logo-image"
+import { generateSizes } from "@/lib/image-service"
 
 type Collection = Database["public"]["Tables"]["logo_collections"]["Row"]
 type Logo = Database["public"]["Tables"]["logos"]["Row"]
@@ -135,7 +137,14 @@ export function CollectionView({ collection, logos: initialLogos }: CollectionVi
             <Card key={logo.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="aspect-square bg-white p-4 flex items-center justify-center">
-                  <div dangerouslySetInnerHTML={{ __html: logo.svg_content }} />
+                  <LogoImage
+                    svgContent={logo.svg_content}
+                    sizes={generateSizes({
+                      sm: "50vw",
+                      md: "33vw",
+                      lg: "25vw",
+                    })}
+                  />
                 </div>
                 <div className="p-3">
                   <p className="text-sm truncate mb-2" title={logo.prompt}>

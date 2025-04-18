@@ -1,19 +1,41 @@
+import Link from "next/link"
+
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border bg-background/50 py-8 sm:py:12 mt-8 backdrop-blur-xl">
-      <div className="container flex flex-col items-center gap-4 px-4">
-        <nav className="flex flex-col sm:flex-row gap-4 sm:gap-8 text-sm items-center">
-          <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-            Privacy Policy
+    <footer className="border-t border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-bottom">
+      <div className="container flex flex-col items-center justify-between gap-4 py-6 md:h-16 md:flex-row md:py-0">
+        <div className="text-center text-xs sm:text-sm leading-loose text-muted-foreground md:text-left">
+          Built with{" "}
+          <a
+            href="https://nextjs.org"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium underline underline-offset-4"
+          >
+            Next.js
+          </a>{" "}
+          and{" "}
+          <a
+            href="https://ui.shadcn.com"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium underline underline-offset-4"
+          >
+            shadcn/ui
           </a>
-          <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-            Terms of Service
-          </a>
-          <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+          .
+        </div>
+        <div className="flex items-center gap-4 text-xs sm:text-sm">
+          <Link href="/privacy" className="font-medium underline underline-offset-4">
+            Privacy
+          </Link>
+          <Link href="/terms" className="font-medium underline underline-offset-4">
+            Terms
+          </Link>
+          <Link href="/contact" className="font-medium underline underline-offset-4">
             Contact
-          </a>
-        </nav>
-        <p className="text-sm text-muted-foreground text-center">© 2024 iLogo. All rights reserved.</p>
+          </Link>
+        </div>
       </div>
     </footer>
   )

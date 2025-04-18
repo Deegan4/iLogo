@@ -3,32 +3,17 @@
 import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import type { User, Session } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import type { User, Session } from "@supabase/auth-helpers-nextjs"
 
 type AuthContextType = {
   user: User | null
   session: Session | null
   isLoading: boolean
-  signIn: (
-    email: string,
-    password: string,
-    rememberMe?: boolean,
-  ) => Promise<{
-    error: Error | null
-  }>
-  signUp: (
-    email: string,
-    password: string,
-    userData?: { fullName?: string },
-  ) => Promise<{
-    error: Error | null
-  }>
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<{
-    error: Error | null
-  }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -40,50 +25,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const supabase = createClient()
 
+  // Initialize the auth state
   useEffect(() => {
-    // Get session from Supabase
-    const getSession = async () => {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession()
+    const initializeAuth = async () => {
+      try {
+        setIsLoading(true)
 
-      if (error) {
-        console.error("Error getting session:", error)
+        // Get the current session
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession()
+
+        if (currentSession) {
+          setSession(currentSession)
+          setUser(currentSession.user)
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error)
+      } finally {
+        setIsLoading(false)
       }
-
-      setSession(session)
-      setUser(session?.user || null)
-      setIsLoading(false)
     }
 
-    getSession()
+    initializeAuth()
 
-    // Listen for auth changes
+    // Set up the auth state change listener
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user || null)
-      setIsLoading(false)
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession)
+      setUser(newSession?.user || null)
       router.refresh()
     })
 
+    // Clean up the subscription
     return () => {
       subscription.unsubscribe()
     }
-  }, [router, supabase])
+  }, [supabase, router])
 
-  const signIn = async (email: string, password: string, rememberMe = false) => {
+  // Sign in function
+  const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          // Set session expiry based on "remember me" option
-          // Default is 1 hour, extended is 30 days
-          expiresIn: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60,
-        },
       })
 
       return { error }
@@ -93,16 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, userData?: { fullName?: string }) => {
+  // Sign up function
+  const signUp = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            full_name: userData?.fullName || null,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
         },
       })
 
@@ -113,22 +97,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Sign out function
   const signOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/")
-    router.refresh()
-  }
-
-  const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      })
-
-      return { error }
+      await supabase.auth.signOut()
+      router.push("/")
     } catch (error) {
-      console.error("Reset password error:", error)
-      return { error: error as Error }
+      console.error("Sign out error:", error)
     }
   }
 
@@ -139,13 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    resetPassword,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext)
 
   if (context === undefined) {

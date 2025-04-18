@@ -13,7 +13,10 @@ const config = {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: {
+        DEFAULT: "1rem",
+        sm: "2rem",
+      },
       screens: {
         "2xl": "1400px",
       },
@@ -92,6 +95,14 @@ const config = {
           "40%": { opacity: "0.8" },
           "60%": { opacity: "0.2" },
         },
+        "mobile-menu-in": {
+          "0%": { transform: "translateY(-10px)", opacity: "0" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
+        },
+        "mobile-menu-out": {
+          "0%": { transform: "translateY(0)", opacity: "1" },
+          "100%": { transform: "translateY(-10px)", opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -101,6 +112,17 @@ const config = {
         "twinkle-1": "twinkle-1 2s ease-in-out infinite",
         "twinkle-2": "twinkle-2 3s ease-in-out infinite",
         "twinkle-3": "twinkle-3 2.5s ease-in-out infinite",
+        "mobile-menu-in": "mobile-menu-in 0.3s ease-out forwards",
+        "mobile-menu-out": "mobile-menu-out 0.3s ease-in forwards",
+      },
+      screens: {
+        xs: "480px",
+      },
+      spacing: {
+        "safe-top": "env(safe-area-inset-top)",
+        "safe-bottom": "env(safe-area-inset-bottom)",
+        "safe-left": "env(safe-area-inset-left)",
+        "safe-right": "env(safe-area-inset-right)",
       },
     },
   },

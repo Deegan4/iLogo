@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { Download, Loader2, Save, Share2, Edit } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Download, Loader2, Save, Share2, Edit, RefreshCw } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Button } from "./ui/button-custom"
@@ -19,6 +19,9 @@ import { PromptExamples } from "./prompt-examples"
 import { LogoEditor } from "./logo-editor"
 import { ExportOptions } from "./export-options"
 import { ShareLogo } from "./share-logo"
+import { useInView } from "react-intersection-observer"
+import { LogoImage } from "@/components/logo-image"
+import { generateSizes } from "@/lib/image-service"
 
 const ALL_LOGOS = [
   "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/tetrahedron9-Y3pXUcOEVxS1uigCghBiFQ5AKgmJyb.svg",
@@ -77,6 +80,52 @@ export function LogoGenerator({
     complexity: "simple",
     industry: "",
   })
+
+  // Add intersection observer for lazy loading
+  const { ref: logoGridRef, inView: logoGridInView } = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+  })
+
+  // Add touch event handling
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const logoRefs = useRef<(HTMLDivElement | null)[]>([null, null, null, null])
+
+  // Handle touch events for swipe to regenerate
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent, index: number) => {
+    if (!touchStartRef.current) return
+
+    const touchEnd = {
+      x: e.changedTouches[0].clientX,
+      y: e.changedTouches[0].clientY,
+    }
+
+    const deltaX = touchEnd.x - touchStartRef.current.x
+    const deltaY = touchEnd.y - touchStartRef.current.y
+
+    // If it's a left swipe and the horizontal movement is significant
+    if (deltaX < -50 && Math.abs(deltaY) < 50) {
+      regenerateImage(index)
+    }
+
+    touchStartRef.current = null
+  }
+
+  // Optimize textarea for mobile
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const focusTextarea = () => {
+    if (textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }
 
   // Simulate typing effect
   useEffect(() => {
@@ -448,52 +497,61 @@ export function LogoGenerator({
       <div className="w-full max-w-4xl px-2 sm:px-4">
         {!svgs.length && !loading ? (
           <>
-            <div className="text-center mt-4 sm:mt-6 mb-8 sm:mb-12 max-w-2xl mx-auto px-2">
-              <h1 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 text-transparent bg-clip-text bg-gradient-to-r from-foreground to-muted-foreground dark:from-white dark:via-purple-100 dark:to-indigo-200">
+            <div className="text-center mt-4 sm:mt-6 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
+              <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4 text-transparent bg-clip-text bg-gradient-to-r from-foreground to-muted-foreground dark:from-white dark:via-purple-100 dark:to-indigo-200">
                 Make Your Logo Pop
               </h1>
-              <p className="text-base sm:text-lg text-muted-foreground">
+              <p className="text-sm sm:text-lg text-muted-foreground">
                 Create unique logos with AI, optimized for web and print
               </p>
             </div>
-            <form onSubmit={generateLogos} className="space-y-4 w-full max-w-xl mx-auto px-2 sm:px-0">
+            <form onSubmit={generateLogos} className="space-y-3 sm:space-y-4 w-full max-w-xl mx-auto px-2 sm:px-0">
               <div className="flex flex-col space-y-2">
                 <Textarea
+                  ref={textareaRef}
                   placeholder="Describe your logo (e.g., 'minimalist mountain peak logo in blue')"
                   value={prompt}
                   onChange={handleTextareaChange}
                   disabled={loading || disabled}
+                  className="min-h-[80px] text-base sm:text-sm"
+                  onClick={focusTextarea}
                 />
                 <div className="flex justify-end">
                   <PromptExamples onSelectPrompt={handleSelectPrompt} />
                 </div>
               </div>
 
-              {/* Style suggestions */}
+              {/* Style suggestions - optimized for mobile */}
               {prompt.trim().length > 3 && (
                 <StyleSuggestions
                   prompt={prompt}
                   onApplySuggestion={handleApplySuggestion}
                   disabled={loading || disabled}
+                  className="text-sm"
                 />
               )}
 
-              {/* Add Logo Customization Options */}
+              {/* Add Logo Customization Options - optimized for mobile */}
               <div className="flex justify-center">
                 <LogoCustomizationOptions
                   options={customizationOptions}
                   onChange={setCustomizationOptions}
                   disabled={loading || disabled}
+                  isMobile={typeof window !== "undefined" && window.innerWidth < 640}
                 />
               </div>
 
-              {/* Generate button */}
+              {/* Generate button - larger on mobile */}
               <div className="space-y-3">
-                <Button type="submit" disabled={loading || !prompt || disabled} className="w-full">
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Generate"}
+                <Button
+                  type="submit"
+                  disabled={loading || !prompt || disabled}
+                  className="w-full py-6 sm:py-4 text-base sm:text-sm"
+                >
+                  {loading ? <Loader2 className="mr-2 h-5 w-5 sm:h-4 sm:w-4 animate-spin" /> : "Generate"}
                 </Button>
               </div>
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-muted-foreground">
                 <span>Powered by</span>
                 <a
                   href="https://groq.com"
@@ -509,74 +567,93 @@ export function LogoGenerator({
           </>
         ) : (
           <>
-            {/* Logo display grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full max-w-sm mx-auto">
+            {/* Logo display grid - optimized for mobile */}
+            <div ref={logoGridRef} className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-sm mx-auto">
               {Array(4)
                 .fill(null)
                 .map((_, i) => (
-                  <div key={i} className="relative group">
+                  <div
+                    key={i}
+                    className="relative group"
+                    ref={(el) => (logoRefs.current[i] = el)}
+                    onTouchStart={(e) => handleTouchStart(e, i)}
+                    onTouchEnd={(e) => handleTouchEnd(e, i)}
+                  >
                     {!svgs[i] ? (
                       <LogoSkeleton />
                     ) : (
                       <div className="w-full aspect-square bg-white rounded-xl flex items-center justify-center relative scale-90 shadow-2xl shadow-primary/5 cursor-pointer">
-                        <div
+                        <LogoImage
+                          svgContent={svgs[i] as string}
                           className="w-full rounded-xl h-full mx-auto overflow-hidden"
-                          dangerouslySetInnerHTML={{ __html: svgs[i] as string }}
+                          priority={i === 0} // Prioritize loading the first logo
+                          sizes={generateSizes({
+                            sm: "50vw", // On mobile, each logo takes half the viewport width
+                            md: "33vw", // On tablets, each logo takes a third of the viewport width
+                            lg: "25vw", // On desktop, each logo takes a quarter of the viewport width
+                          })}
                         />
 
-                        {/* Fallback if SVG doesn't render */}
-                        <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none opacity-0">
-                          SVG should render here
-                        </div>
-                        <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 bg-background/90 hover:bg-background backdrop-blur-sm transition-colors"
-                            onClick={() => {
-                              setSelectedLogo(svgs[i] as string)
-                              setSelectedLogoIndex(i)
-                              setIsEditing(true)
-                            }}
-                            aria-label="Edit Logo"
-                          >
-                            <Edit className="h-4 w-4 text-foreground" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 bg-background/90 hover:bg-background backdrop-blur-sm transition-colors"
-                            onClick={() => {
-                              setSelectedLogo(svgs[i] as string)
-                              setSelectedLogoIndex(i)
-                              setIsExporting(true)
-                            }}
-                            aria-label="Export Logo"
-                          >
-                            <Download className="h-4 w-4 text-foreground" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 bg-background/90 hover:bg-background backdrop-blur-sm transition-colors"
-                            onClick={() => {
-                              setSelectedLogo(svgs[i] as string)
-                              setSelectedLogoIndex(i)
-                              setIsSharing(true)
-                            }}
-                            aria-label="Share Logo"
-                          >
-                            <Share2 className="h-4 w-4 text-foreground" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 bg-background/90 hover:bg-background backdrop-blur-sm transition-colors"
-                            onClick={() => handleSaveLogo(i)}
-                            aria-label="Save Logo"
-                          >
-                            <Save className="h-4 w-4 text-foreground" />
-                          </Button>
+                        {/* Mobile-friendly controls */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors rounded-xl">
+                          <div className="absolute top-1 right-1 sm:top-2 sm:right-2 flex flex-col sm:flex-row gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 bg-background/90 hover:bg-background backdrop-blur-sm transition-colors"
+                              onClick={() => {
+                                setSelectedLogo(svgs[i] as string)
+                                setSelectedLogoIndex(i)
+                                setIsEditing(true)
+                              }}
+                              aria-label="Edit Logo"
+                            >
+                              <Edit className="h-4 w-4 text-foreground" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 bg-background/90 hover:bg-background backdrop-blur-sm transition-colors"
+                              onClick={() => {
+                                setSelectedLogo(svgs[i] as string)
+                                setSelectedLogoIndex(i)
+                                setIsExporting(true)
+                              }}
+                              aria-label="Export Logo"
+                            >
+                              <Download className="h-4 w-4 text-foreground" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 bg-background/90 hover:bg-background backdrop-blur-sm transition-colors"
+                              onClick={() => {
+                                setSelectedLogo(svgs[i] as string)
+                                setSelectedLogoIndex(i)
+                                setIsSharing(true)
+                              }}
+                              aria-label="Share Logo"
+                            >
+                              <Share2 className="h-4 w-4 text-foreground" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 bg-background/90 hover:bg-background backdrop-blur-sm transition-colors"
+                              onClick={() => handleSaveLogo(i)}
+                              aria-label="Save Logo"
+                            >
+                              <Save className="h-4 w-4 text-foreground" />
+                            </Button>
+                          </div>
+
+                          {/* Swipe hint for mobile */}
+                          <div className="absolute bottom-2 left-0 right-0 text-center text-xs text-white/70 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <div className="flex items-center justify-center gap-1">
+                              <RefreshCw className="h-3 w-3" />
+                              <span>Swipe left to regenerate</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -587,13 +664,13 @@ export function LogoGenerator({
         )}
 
         {error && (
-          <div className="text-destructive text-center mt-4 p-4 rounded-lg bg-destructive/10 backdrop-blur-sm">
+          <div className="text-destructive text-center mt-4 p-4 rounded-lg bg-destructive/10 backdrop-blur-sm text-sm">
             {error}
           </div>
         )}
       </div>
 
-      {/* Logo Editor Dialog */}
+      {/* Mobile-optimized dialogs */}
       {selectedLogo && isEditing && (
         <LogoEditor
           logo={{
@@ -608,10 +685,10 @@ export function LogoGenerator({
           open={isEditing}
           onOpenChange={setIsEditing}
           onSave={handleLogoUpdated}
+          isMobile={typeof window !== "undefined" && window.innerWidth < 640}
         />
       )}
 
-      {/* Export Options Dialog */}
       {selectedLogo && isExporting && (
         <ExportOptions
           logo={{
@@ -625,10 +702,10 @@ export function LogoGenerator({
           }}
           open={isExporting}
           onOpenChange={setIsExporting}
+          isMobile={typeof window !== "undefined" && window.innerWidth < 640}
         />
       )}
 
-      {/* Share Logo Dialog */}
       {selectedLogo && isSharing && (
         <ShareLogo
           logo={{
@@ -642,6 +719,7 @@ export function LogoGenerator({
           }}
           open={isSharing}
           onOpenChange={setIsSharing}
+          isMobile={typeof window !== "undefined" && window.innerWidth < 640}
         />
       )}
 

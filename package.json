@@ -59,9 +59,18 @@
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
     "@supabase/supabase-js": "latest",
+    "@remix-run/react": "latest",
+    "@sveltejs/kit": "latest",
+    "svelte": "latest",
+    "vue": "latest",
+    "vue-router": "latest",
+    "@emotion/is-prop-valid": "latest",
     "@ai-sdk/groq": "latest",
     "ai": "latest",
-    "@supabase/auth-helpers-nextjs": "latest"
+    "@supabase/auth-helpers-nextjs": "latest",
+    "@vercel/analytics": "latest",
+    "framer-motion": "latest",
+    "react-intersection-observer": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

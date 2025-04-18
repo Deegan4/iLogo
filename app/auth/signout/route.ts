@@ -1,14 +1,17 @@
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const cookieStore = cookies()
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
 
   // Sign out the user
   await supabase.auth.signOut()
 
-  // Redirect to the home page
-  return NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"))
+  // URL to redirect to after sign out process completes
+  return NextResponse.redirect(new URL("/", request.url), {
+    status: 302,
+  })
 }

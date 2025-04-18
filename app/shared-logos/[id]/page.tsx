@@ -3,6 +3,8 @@ import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button-custom"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Download, Share2 } from "lucide-react"
+import { LogoImage } from "@/components/logo-image"
+import { generateSizes } from "@/lib/image-service"
 
 export default async function SharedLogoPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -30,7 +32,17 @@ export default async function SharedLogoPage({ params }: { params: { id: string 
         </CardHeader>
         <CardContent>
           <div className="bg-white rounded-lg p-8 aspect-square flex items-center justify-center">
-            <div dangerouslySetInnerHTML={{ __html: logo.svg_content }} className="w-full h-full" />
+            <LogoImage
+              svgContent={logo.svg_content}
+              className="w-full h-full"
+              priority
+              sizes={generateSizes({
+                sm: "100vw",
+                md: "80vw",
+                lg: "60vw",
+                xl: "50vw",
+              })}
+            />
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">

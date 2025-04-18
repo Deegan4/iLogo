@@ -5,29 +5,33 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
-export function SignInForm() {
+export function SimpleSignInForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const { signIn } = useAuth()
+  const supabase = createClientComponentClient()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
 
     try {
-      const { error } = await signIn(email, password)
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
       if (error) {
         setError(error.message)
         return
       }
 
+      router.refresh()
       router.push("/dashboard")
     } catch (err) {
       console.error("Sign in error:", err)
@@ -43,7 +47,7 @@ export function SignInForm() {
         <h1 className="text-2xl font-semibold tracking-tight">Sign In</h1>
         <p className="text-sm text-muted-foreground">Enter your email and password to sign in</p>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSignIn} className="space-y-4">
         <div className="space-y-2">
           <label
             htmlFor="email"

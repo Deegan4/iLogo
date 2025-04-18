@@ -10,6 +10,8 @@ import { Download, Heart, Trash2, FolderPlus } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useLogoCollections } from "@/hooks/use-logo-collections"
 import type { Database } from "@/lib/database.types"
+import { LogoImage } from "@/components/logo-image"
+import { generateSizes } from "@/lib/image-service"
 
 type Logo = Database["public"]["Tables"]["logos"]["Row"]
 
@@ -136,7 +138,15 @@ export function LogoGallery({ logos: initialLogos }: LogoGalleryProps) {
           <Card key={logo.id} className="overflow-hidden">
             <CardContent className="p-0">
               <div className="aspect-square bg-white p-4 flex items-center justify-center">
-                <div dangerouslySetInnerHTML={{ __html: logo.svg_content }} />
+                <LogoImage
+                  svgContent={logo.svg_content}
+                  sizes={generateSizes({
+                    sm: "100vw",
+                    md: "50vw",
+                    lg: "33vw",
+                    xl: "25vw",
+                  })}
+                />
               </div>
               <div className="p-3">
                 <p className="text-sm truncate mb-2" title={logo.prompt}>

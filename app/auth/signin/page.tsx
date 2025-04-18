@@ -1,6 +1,6 @@
-import { SignInForm } from "@/components/auth/sign-in-form"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { SignInForm } from "@/components/auth/sign-in-form"
 
 export default async function SignInPage() {
   // Check if user is already signed in
@@ -14,5 +14,9 @@ export default async function SignInPage() {
     redirect("/dashboard")
   }
 
-  return <SignInForm />
+  return (
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <SignInForm />
+    </div>
+  )
 }

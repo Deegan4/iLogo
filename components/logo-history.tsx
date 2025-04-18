@@ -14,6 +14,9 @@ import { CategoryBadge, LOGO_CATEGORIES, getCategoriesByIds } from "./logo-categ
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { LogoImage } from "@/components/logo-image"
+import { generateSizes } from "@/lib/image-service"
+import { ResponsiveImage } from "@/components/responsive-image"
 
 export interface LogoHistoryItem {
   id: string
@@ -299,12 +302,26 @@ export function LogoHistory({
                     {/* Logo preview */}
                     <div className="w-full h-full flex items-center justify-center p-2">
                       {logo.customizedSvg.includes("<div") ? (
-                        <div dangerouslySetInnerHTML={{ __html: logo.customizedSvg }} className="w-full h-full" />
+                        <LogoImage
+                          svgContent={logo.customizedSvg}
+                          className="w-full h-full"
+                          sizes={generateSizes({
+                            sm: "50vw", // On mobile, each logo takes half the viewport width
+                            md: "33vw", // On tablets, each logo takes a third of the viewport width
+                            lg: "25vw", // On desktop, each logo takes a quarter of the viewport width
+                          })}
+                        />
                       ) : (
-                        <img
+                        <ResponsiveImage
                           src={logo.customizedSvg || "/placeholder.svg"}
                           alt={`Logo for ${logo.prompt}`}
-                          className="w-full h-full object-contain"
+                          fill
+                          objectFit="contain"
+                          sizes={generateSizes({
+                            sm: "50vw",
+                            md: "33vw",
+                            lg: "25vw",
+                          })}
                         />
                       )}
                     </div>

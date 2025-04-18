@@ -4,33 +4,26 @@ import type { NextRequest } from "next/server"
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
+
+  // Create a Supabase client configured to use cookies
   const supabase = createMiddlewareClient({ req, res })
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  // Check auth condition
-  const isAuthRoute = req.nextUrl.pathname.startsWith("/auth")
-  const isApiRoute = req.nextUrl.pathname.startsWith("/api")
-  const isPublicRoute =
-    req.nextUrl.pathname === "/" ||
-    req.nextUrl.pathname.startsWith("/blog") ||
-    req.nextUrl.pathname.startsWith("/about")
-
-  // If user is signed in and trying to access auth page, redirect to dashboard
-  if (session && isAuthRoute) {
-    return NextResponse.redirect(new URL("/dashboard", req.url))
-  }
-
-  // If user is not signed in and trying to access protected page, redirect to sign in
-  if (!session && !isAuthRoute && !isPublicRoute && !isApiRoute) {
-    return NextResponse.redirect(new URL("/auth/signin", req.url))
-  }
+  // Refresh session if expired - required for Server Components
+  await supabase.auth.getSession()
 
   return res
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     * - public files
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 }

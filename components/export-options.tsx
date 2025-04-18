@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Download, FileImage, FileCode, Loader2 } from "lucide-react"
 import type { Database } from "@/lib/database.types"
+import { ResponsiveImage } from "@/components/ui/responsive-image"
+import { generateSizes } from "@/lib/image-service"
 
 type Logo = Database["public"]["Tables"]["logos"]["Row"]
 
@@ -246,7 +248,20 @@ export function ExportOptions({ logo, open, onOpenChange }: ExportOptionsProps) 
 
             {previewUrl && (
               <div className="mt-4 bg-white p-4 rounded-lg border">
-                <img src={previewUrl || "/placeholder.svg"} alt="Preview" className="w-full h-auto object-contain" />
+                <ResponsiveImage
+                  src={previewUrl}
+                  alt="Preview"
+                  width={512}
+                  height={512}
+                  className="w-full h-auto"
+                  objectFit="contain"
+                  sizes={generateSizes({
+                    sm: "100vw",
+                    md: "80vw",
+                    lg: "60vw",
+                    xl: "40vw",
+                  })}
+                />
               </div>
             )}
           </div>

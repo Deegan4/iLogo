@@ -14,6 +14,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from "@/lib/utils"
 import type { Database } from "@/lib/database.types"
 
+// Import the new components
+import { LogoImage } from "@/components/logo-image"
+import { generateSizes } from "@/lib/image-service"
+
 type Logo = Database["public"]["Tables"]["logos"]["Row"]
 
 // Predefined color palettes
@@ -164,7 +168,17 @@ export function LogoEditor({ logo, open, onOpenChange, onSave }: LogoEditorProps
         <div className="flex flex-col md:flex-row gap-6">
           {/* Preview */}
           <div className="w-full md:w-1/2 bg-white rounded-lg aspect-square flex items-center justify-center overflow-hidden">
-            <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: previewSvg }} />
+            <LogoImage
+              svgContent={previewSvg}
+              className="w-full h-full"
+              priority
+              sizes={generateSizes({
+                sm: "100vw",
+                md: "50vw",
+                lg: "40vw",
+                xl: "33vw",
+              })}
+            />
           </div>
 
           {/* Editor */}
