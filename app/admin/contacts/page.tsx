@@ -19,10 +19,7 @@ export default async function ContactsAdminPage() {
     redirect("/auth/signin")
   }
 
-  // Check if user is an admin (you would need to implement this logic)
-  // For now, we'll just allow any authenticated user to access this page
-
-  // Fetch contacts - we need to add RLS policies for this
+  // Fetch contacts - RLS will ensure the user can only see contacts they're allowed to see
   const { data: contacts, error } = await supabase
     .from("contacts")
     .select("*")

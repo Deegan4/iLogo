@@ -1,10 +1,4 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export interface Database {
   public: {
@@ -43,7 +37,7 @@ export interface Database {
             columns: ["user_id"]
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       logo_collections: {
@@ -74,7 +68,7 @@ export interface Database {
             columns: ["user_id"]
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       logo_collection_items: {
@@ -105,7 +99,7 @@ export interface Database {
             columns: ["logo_id"]
             referencedRelation: "logos"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       logo_generation_history: {
@@ -139,7 +133,7 @@ export interface Database {
             columns: ["user_id"]
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       contacts: {
@@ -179,7 +173,7 @@ export interface Database {
             columns: ["user_id"]
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
     }

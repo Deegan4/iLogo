@@ -1,8 +1,7 @@
 "use client"
 
-import type React from "react"
-
-import { useFormState } from "react-dom"
+import { useActionState } from "react"
+import { useFormStatus } from "react-dom"
 import { useEffect, useState } from "react"
 import { submitContactForm, type ContactFormState } from "@/app/actions/contact"
 import { Button } from "@/components/ui/button"
@@ -14,16 +13,31 @@ import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
 
 const initialState: ContactFormState = {}
 
+function SubmitButton() {
+  const { pending } = useFormStatus()
+
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Sending...
+        </>
+      ) : (
+        "Send Message"
+      )}
+    </Button>
+  )
+}
+
 export function ContactForm() {
-  const [state, formAction] = useFormState(submitContactForm, initialState)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [state, formAction] = useActionState(submitContactForm, initialState)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
 
   // Handle form submission state
   useEffect(() => {
     if (state.success) {
       setShowSuccessMessage(true)
-      setIsSubmitting(false)
 
       // Hide success message after 5 seconds
       const timer = setTimeout(() => {
@@ -31,16 +45,8 @@ export function ContactForm() {
       }, 5000)
 
       return () => clearTimeout(timer)
-    } else if (state.errors) {
-      setIsSubmitting(false)
     }
   }, [state])
-
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    setIsSubmitting(true)
-    // The actual submission is handled by the form action
-  }
 
   return (
     <div className="space-y-6">
@@ -60,14 +66,14 @@ export function ContactForm() {
         </Alert>
       )}
 
-      <form action={formAction} onSubmit={handleSubmit} className="space-y-4">
+      <form action={formAction} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
           <Input
             id="name"
             name="name"
             placeholder="Your name"
-            disabled={isSubmitting || showSuccessMessage}
+            disabled={showSuccessMessage}
             aria-invalid={!!state.errors?.name}
             aria-describedby={state.errors?.name ? "name-error" : undefined}
           />
@@ -85,7 +91,7 @@ export function ContactForm() {
             name="email"
             type="email"
             placeholder="your.email@example.com"
-            disabled={isSubmitting || showSuccessMessage}
+            disabled={showSuccessMessage}
             aria-invalid={!!state.errors?.email}
             aria-describedby={state.errors?.email ? "email-error" : undefined}
           />
@@ -103,7 +109,7 @@ export function ContactForm() {
             name="message"
             placeholder="Your message"
             rows={5}
-            disabled={isSubmitting || showSuccessMessage}
+            disabled={showSuccessMessage}
             aria-invalid={!!state.errors?.message}
             aria-describedby={state.errors?.message ? "message-error" : undefined}
           />
@@ -114,16 +120,7 @@ export function ContactForm() {
           )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting || showSuccessMessage}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending...
-            </>
-          ) : (
-            "Send Message"
-          )}
-        </Button>
+        <SubmitButton />
       </form>
     </div>
   )

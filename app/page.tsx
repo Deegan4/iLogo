@@ -19,71 +19,125 @@ export default function Page() {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext("2d")
+    const ctx = canvas.getContext("2d", { alpha: true })
     if (!ctx) return
 
-    // Mouse position tracking
-    let mouseX = 0
-    let mouseY = 0
-    const mouseRadius = 150
+    // Mouse/touch position tracking
+    let pointerX = 0
+    let pointerY = 0
+    const pointerRadius = 150
+
     // Add cursor glow effect variables
     let glowIntensity = 0
     let glowDirection = 0.02
     const maxGlowIntensity = 0.4
     const minGlowIntensity = 0.2
 
-    // Set canvas dimensions
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+    // iOS detection
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+
+    // Set canvas dimensions with device pixel ratio consideration for Retina displays
+    const setCanvasDimensions = () => {
+      const devicePixelRatio = window.devicePixelRatio || 1
+
+      // Get display size
+      const displayWidth = window.innerWidth
+      const displayHeight = window.innerHeight
+
+      // Set canvas size in display pixels
+      canvas.style.width = `${displayWidth}px`
+      canvas.style.height = `${displayHeight}px`
+
+      // Set actual size in memory (scaled for retina)
+      canvas.width = Math.floor(displayWidth * devicePixelRatio)
+      canvas.height = Math.floor(displayHeight * devicePixelRatio)
+
+      // Scale context to match device pixel ratio
+      ctx.scale(devicePixelRatio, devicePixelRatio)
+
+      // Reset the context after resize
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0)
     }
 
-    resizeCanvas()
-    window.addEventListener("resize", resizeCanvas)
+    setCanvasDimensions()
 
-    // Mouse move event listener
-    canvas.addEventListener("mousemove", (e) => {
-      mouseX = e.x
-      mouseY = e.y
+    // Throttled resize handler for better performance
+    let resizeTimeout
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(setCanvasDimensions, 200)
     })
 
-    // Touch event listener for mobile
-    canvas.addEventListener("touchmove", (e) => {
-      e.preventDefault()
-      mouseX = e.touches[0].clientX
-      mouseY = e.touches[0].clientY
-    })
+    // Optimize number of particles based on device
+    const getOptimalParticleCount = () => {
+      if (isIOS) {
+        // Reduce particle count on iOS devices
+        const iosVersion = Number.parseInt((navigator.userAgent.match(/OS (\d+)_/) || [])[1], 10)
 
-    // Mouse leave event
-    canvas.addEventListener("mouseleave", () => {
-      mouseX = undefined
-      mouseY = undefined
-    })
+        if (window.innerWidth <= 375) {
+          // iPhone SE, 6, 7, 8 size
+          return 40
+        } else if (iosVersion && iosVersion < 15) {
+          // Older iOS versions
+          return 60
+        } else {
+          // Newer iOS versions
+          return 80
+        }
+      }
+
+      // Default for other devices
+      return 100
+    }
+
+    // Pointer event handlers (unified mouse/touch)
+    const handlePointerMove = (e) => {
+      // Prevent scrolling on iOS when interacting with canvas
+      if (e.cancelable) e.preventDefault()
+
+      // Get pointer position
+      if (e.touches) {
+        pointerX = e.touches[0].clientX
+        pointerY = e.touches[0].clientY
+      } else {
+        pointerX = e.clientX
+        pointerY = e.clientY
+      }
+    }
+
+    const handlePointerLeave = () => {
+      pointerX = undefined
+      pointerY = undefined
+    }
+
+    // Add passive: false for iOS to allow preventDefault
+    canvas.addEventListener("mousemove", handlePointerMove)
+    canvas.addEventListener("touchmove", handlePointerMove, { passive: false })
+    canvas.addEventListener("mouseleave", handlePointerLeave)
+    canvas.addEventListener("touchend", handlePointerLeave)
 
     // Particles configuration
-    const particlesArray: Particle[] = []
-    const numberOfParticles = 100
+    const particlesArray = []
+    const numberOfParticles = getOptimalParticleCount()
 
     // Particle class
     class Particle {
-      x: number
-      y: number
-      size: number
-      baseSize: number
-      speedX: number
-      speedY: number
-      color: string
-      baseColor: string
-
       constructor() {
-        this.x = Math.random() * canvas.width
-        this.y = Math.random() * canvas.height
-        this.baseSize = Math.random() * 3 + 1
+        this.x = Math.random() * window.innerWidth
+        this.y = Math.random() * window.innerHeight
+        this.baseSize = Math.random() * 2.5 + 0.5 // Slightly smaller for better performance
         this.size = this.baseSize
-        this.speedX = (Math.random() - 0.5) * 1
-        this.speedY = (Math.random() - 0.5) * 1
-        this.baseColor = `rgba(120, 79, 255, ${Math.random() * 0.5 + 0.2})`
+        this.speedX = (Math.random() - 0.5) * 0.8 // Slightly slower for better performance
+        this.speedY = (Math.random() - 0.5) * 0.8
+        this.baseColor = `rgba(120, 79, 255, ${Math.random() * 0.4 + 0.2})`
         this.color = this.baseColor
+
+        // Add slight variation to make it more interesting
+        this.oscillationSpeed = Math.random() * 0.02
+        this.oscillationDistance = Math.random() * 0.5
+        this.oscillationOffset = Math.random() * Math.PI * 2
       }
 
       update() {
@@ -91,32 +145,35 @@ export default function Page() {
         this.x += this.speedX
         this.y += this.speedY
 
-        // Screen boundaries
-        if (this.x > canvas.width) this.x = 0
-        if (this.x < 0) this.x = canvas.width
-        if (this.y > canvas.height) this.y = 0
-        if (this.y < 0) this.y = canvas.height
+        // Add slight oscillation for more organic movement
+        this.x += Math.sin(Date.now() * this.oscillationSpeed + this.oscillationOffset) * this.oscillationDistance
 
-        // Mouse interaction
-        if (mouseX !== undefined && mouseY !== undefined) {
-          const dx = this.x - mouseX
-          const dy = this.y - mouseY
+        // Screen boundaries
+        if (this.x > window.innerWidth) this.x = 0
+        if (this.x < 0) this.x = window.innerWidth
+        if (this.y > window.innerHeight) this.y = 0
+        if (this.y < 0) this.y = window.innerHeight
+
+        // Pointer interaction
+        if (pointerX !== undefined && pointerY !== undefined) {
+          const dx = this.x - pointerX
+          const dy = this.y - pointerY
           const distance = Math.sqrt(dx * dx + dy * dy)
 
-          if (distance < mouseRadius) {
+          if (distance < pointerRadius) {
             // Calculate force (closer = stronger)
-            const force = (mouseRadius - distance) / mouseRadius
+            const force = (pointerRadius - distance) / pointerRadius
 
-            // Move particles away from mouse
+            // Move particles away from pointer
             const angle = Math.atan2(dy, dx)
             this.x += Math.cos(angle) * force * 2
             this.y += Math.sin(angle) * force * 2
 
-            // Increase size and change color when near mouse
+            // Increase size and change color when near pointer
             this.size = this.baseSize + force * 3
             this.color = `rgba(160, 120, 255, ${Math.min(0.8, force + 0.2)})`
           } else {
-            // Return to normal size and color when away from mouse
+            // Return to normal size and color when away from pointer
             this.size = this.baseSize
             this.color = this.baseColor
           }
@@ -139,44 +196,80 @@ export default function Page() {
     }
     init()
 
-    // Connect particles with lines
+    // Connect particles with lines - optimized version
     function connect() {
-      const maxDistance = 150
-      for (let a = 0; a < particlesArray.length; a++) {
-        for (let b = a; b < particlesArray.length; b++) {
-          const dx = particlesArray[a].x - particlesArray[b].x
-          const dy = particlesArray[a].y - particlesArray[b].y
-          const distance = Math.sqrt(dx * dx + dy * dy)
+      // Adjust connection distance based on device
+      const maxDistance = isIOS ? 120 : 150
 
-          if (distance < maxDistance) {
-            // Base connection opacity
-            let opacity = 1 - distance / maxDistance
+      // Use a more efficient approach to avoid checking every particle pair
+      const gridSize = maxDistance
+      const grid = {}
 
-            // Enhance connections near mouse
-            if (mouseX !== undefined && mouseY !== undefined) {
-              const mdx = (particlesArray[a].x + particlesArray[b].x) / 2 - mouseX
-              const mdy = (particlesArray[a].y + particlesArray[b].y) / 2 - mouseY
-              const mouseDistance = Math.sqrt(mdx * mdx + mdy * mdy)
+      // Place particles in grid cells
+      particlesArray.forEach((particle, index) => {
+        const cellX = Math.floor(particle.x / gridSize)
+        const cellY = Math.floor(particle.y / gridSize)
+        const cellKey = `${cellX},${cellY}`
 
-              if (mouseDistance < mouseRadius) {
-                opacity = Math.min(0.8, opacity + ((mouseRadius - mouseDistance) / mouseRadius) * 0.5)
+        if (!grid[cellKey]) {
+          grid[cellKey] = []
+        }
+
+        grid[cellKey].push(index)
+      })
+
+      // Check particles in nearby cells only
+      particlesArray.forEach((particleA, a) => {
+        const cellX = Math.floor(particleA.x / gridSize)
+        const cellY = Math.floor(particleA.y / gridSize)
+
+        // Check neighboring cells
+        for (let nx = cellX - 1; nx <= cellX + 1; nx++) {
+          for (let ny = cellY - 1; ny <= cellY + 1; ny++) {
+            const neighborCellKey = `${nx},${ny}`
+            const neighborIndices = grid[neighborCellKey] || []
+
+            // Check particles in this cell
+            neighborIndices.forEach((b) => {
+              // Skip if we've already checked this pair or it's the same particle
+              if (b <= a) return
+
+              const particleB = particlesArray[b]
+              const dx = particleA.x - particleB.x
+              const dy = particleA.y - particleB.y
+              const distance = Math.sqrt(dx * dx + dy * dy)
+
+              if (distance < maxDistance) {
+                // Base connection opacity
+                let opacity = 1 - distance / maxDistance
+
+                // Enhance connections near pointer
+                if (pointerX !== undefined && pointerY !== undefined) {
+                  const mdx = (particleA.x + particleB.x) / 2 - pointerX
+                  const mdy = (particleA.y + particleB.y) / 2 - pointerY
+                  const pointerDistance = Math.sqrt(mdx * mdx + mdy * mdy)
+
+                  if (pointerDistance < pointerRadius) {
+                    opacity = Math.min(0.8, opacity + ((pointerRadius - pointerDistance) / pointerRadius) * 0.5)
+                  }
+                }
+
+                ctx.strokeStyle = `rgba(120, 79, 255, ${opacity * 0.2})`
+                ctx.lineWidth = 1
+                ctx.beginPath()
+                ctx.moveTo(particleA.x, particleA.y)
+                ctx.lineTo(particleB.x, particleB.y)
+                ctx.stroke()
               }
-            }
-
-            ctx.strokeStyle = `rgba(120, 79, 255, ${opacity * 0.2})`
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            ctx.moveTo(particlesArray[a].x, particlesArray[a].y)
-            ctx.lineTo(particlesArray[b].x, particlesArray[b].y)
-            ctx.stroke()
+            })
           }
         }
-      }
+      })
     }
 
     // Draw cursor glow effect
     function drawCursorGlow() {
-      if (mouseX === undefined || mouseY === undefined) return
+      if (pointerX === undefined || pointerY === undefined) return
 
       // Update glow intensity for pulsing effect
       if (glowIntensity >= maxGlowIntensity || glowIntensity <= minGlowIntensity) {
@@ -185,41 +278,69 @@ export default function Page() {
       glowIntensity += glowDirection
 
       // Create radial gradient for glow effect
-      const gradient = ctx.createRadialGradient(mouseX, mouseY, 5, mouseX, mouseY, mouseRadius)
+      const gradient = ctx.createRadialGradient(pointerX, pointerY, 5, pointerX, pointerY, pointerRadius)
 
       gradient.addColorStop(0, `rgba(160, 120, 255, ${glowIntensity})`)
       gradient.addColorStop(0.5, `rgba(120, 79, 255, ${glowIntensity * 0.5})`)
       gradient.addColorStop(1, "rgba(120, 79, 255, 0)")
 
       ctx.beginPath()
-      ctx.arc(mouseX, mouseY, mouseRadius, 0, Math.PI * 2)
+      ctx.arc(pointerX, pointerY, pointerRadius, 0, Math.PI * 2)
       ctx.fillStyle = gradient
       ctx.fill()
     }
 
-    // Animation loop
-    function animate() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+    // Animation variables for RAF optimization
+    let animationFrameId
+    let lastFrameTime = 0
+    const targetFPS = isIOS ? 30 : 60 // Lower target FPS for iOS to save battery
+    const frameInterval = 1000 / targetFPS
 
-      // Draw cursor glow first (behind particles)
-      drawCursorGlow()
+    // Animation loop with timing control
+    function animate(currentTime) {
+      animationFrameId = requestAnimationFrame(animate)
 
-      for (let i = 0; i < particlesArray.length; i++) {
-        particlesArray[i].update()
-        particlesArray[i].draw()
+      // Calculate time elapsed since last frame
+      const elapsed = currentTime - lastFrameTime
+
+      // Only render if enough time has passed (frame rate control)
+      if (elapsed > frameInterval) {
+        // Adjust for frame rate
+        lastFrameTime = currentTime - (elapsed % frameInterval)
+
+        // Clear with composite operation for better performance
+        ctx.clearRect(
+          0,
+          0,
+          canvas.width / (window.devicePixelRatio || 1),
+          canvas.height / (window.devicePixelRatio || 1),
+        )
+
+        // Draw cursor glow first (behind particles)
+        drawCursorGlow()
+
+        // Update and draw particles
+        for (let i = 0; i < particlesArray.length; i++) {
+          particlesArray[i].update()
+          particlesArray[i].draw()
+        }
+
+        // Connect particles
+        connect()
       }
-      connect()
-
-      requestAnimationFrame(animate)
     }
-    animate()
+
+    // Start animation
+    animationFrameId = requestAnimationFrame(animate)
 
     // Cleanup
     return () => {
-      window.removeEventListener("resize", resizeCanvas)
-      canvas.removeEventListener("mousemove", () => {})
-      canvas.removeEventListener("touchmove", () => {})
-      canvas.removeEventListener("mouseleave", () => {})
+      cancelAnimationFrame(animationFrameId)
+      window.removeEventListener("resize", () => {})
+      canvas.removeEventListener("mousemove", handlePointerMove)
+      canvas.removeEventListener("touchmove", handlePointerMove)
+      canvas.removeEventListener("mouseleave", handlePointerLeave)
+      canvas.removeEventListener("touchend", handlePointerLeave)
     }
   }, [])
 
@@ -241,11 +362,17 @@ export default function Page() {
 
       <SiteHeader demoMode={demoMode} setDemoMode={setDemoMode} />
       <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 pt-24 relative z-10">
-        {/* Cyber animated background */}
+        {/* Cyber animated background - optimized for iOS */}
         <canvas
           ref={canvasRef}
           className="absolute inset-0 -z-10 w-full h-full cursor-none"
-          style={{ pointerEvents: "auto" }}
+          style={{
+            pointerEvents: "auto",
+            touchAction: "none", // Prevent default touch actions on iOS
+            WebkitTapHighlightColor: "transparent", // Remove tap highlight on iOS
+            transform: "translateZ(0)", // Enable hardware acceleration
+          }}
+          aria-hidden="true"
         />
 
         {/* Digital grid overlay */}

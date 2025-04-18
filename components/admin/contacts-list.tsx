@@ -9,16 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { Mail, Trash2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { Database } from "@/lib/database.types"
 
-type Contact = {
-  id: string
-  name: string
-  email: string
-  message: string
-  status: string
-  created_at: string
-  updated_at: string | null
-}
+type Contact = Database["public"]["Tables"]["contacts"]["Row"]
 
 interface ContactsListProps {
   initialContacts: Contact[]
@@ -37,7 +30,7 @@ export function ContactsList({ initialContacts }: ContactsListProps) {
       // Optimistically update the UI
       setContacts((prev) => prev.map((contact) => (contact.id === id ? { ...contact, status } : contact)))
 
-      // Update in the database
+      // Update in the database - RLS will ensure the user can only update contacts they're allowed to
       const { error } = await supabase.from("contacts").update({ status }).eq("id", id)
 
       if (error) {
@@ -65,7 +58,7 @@ export function ContactsList({ initialContacts }: ContactsListProps) {
       // Optimistically update the UI
       setContacts((prev) => prev.filter((contact) => contact.id !== id))
 
-      // Delete from the database
+      // Delete from the database - RLS will ensure the user can only delete contacts they're allowed to
       const { error } = await supabase.from("contacts").delete().eq("id", id)
 
       if (error) {

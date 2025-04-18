@@ -136,6 +136,7 @@
 
 /* Mobile-first responsive utilities */
 @layer utilities {
+  /* Existing utilities */
   .touch-action-none {
     touch-action: none;
   }
@@ -154,5 +155,41 @@
 
   .safe-right {
     padding-right: env(safe-area-inset-right);
+  }
+
+  /* New iOS optimization utilities */
+  .ios-hardware-accelerated {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
+  }
+
+  .ios-no-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ios-smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Add this to improve animation performance on iOS */
+@supports (-webkit-touch-callout: none) {
+  /* iOS-specific styles */
+  canvas {
+    image-rendering: -webkit-optimize-contrast;
+    will-change: transform;
+  }
+
+  /* Optimize animations on iOS */
+  .animate-sparkle,
+  .animate-pulse-slow,
+  .animate-twinkle-1,
+  .animate-twinkle-2,
+  .animate-twinkle-3 {
+    will-change: transform, opacity;
   }
 }
