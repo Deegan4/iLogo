@@ -4,10 +4,15 @@ import { useState, useEffect, useRef } from "react"
 import { LogoGeneratorWithAuth } from "@/components/logo-generator-with-auth"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { motion } from "framer-motion"
+import { useInView } from "@/hooks/use-scroll"
 
 export default function Page() {
   const [demoMode, setDemoMode] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  // Refs for scroll animations
+  const [heroRef, heroInView] = useInView()
 
   // Add this useEffect for the cyber background animation
   useEffect(() => {
@@ -256,7 +261,16 @@ export default function Page() {
           }}
         />
 
-        <LogoGeneratorWithAuth demoMode={demoMode} />
+        {/* Logo generator with scroll animation */}
+        <motion.div
+          ref={heroRef}
+          initial={{ opacity: 0, y: 20 }}
+          animate={heroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6 }}
+          className="w-full"
+        >
+          <LogoGeneratorWithAuth demoMode={demoMode} />
+        </motion.div>
       </main>
       <SiteFooter />
     </div>

@@ -6,6 +6,7 @@ import { Suspense } from "react"
 
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
+import { ScrollToTop } from "@/components/scroll-to-top"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -41,6 +42,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <Suspense>{children}</Suspense>
+            <ScrollToTop />
           </AuthProvider>
         </ThemeProvider>
         <Analytics />

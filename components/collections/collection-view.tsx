@@ -3,17 +3,12 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/components/ui/use-toast"
-import { Button } from "@/components/ui/button-custom"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Download, Heart, Trash2, Share2, Edit, ArrowLeft } from "lucide-react"
-import { LogoEditor } from "@/components/logo-editor"
-import { ExportOptions } from "@/components/export-options"
-import { ShareLogo } from "@/components/share-logo"
-import type { Database } from "@/lib/database.types"
+import { Download, Heart, Trash2, ArrowLeft } from "lucide-react"
 import { LogoImage } from "@/components/logo-image"
-import { generateSizes } from "@/lib/image-service"
+import type { Database } from "@/lib/database.types"
 
 type Collection = Database["public"]["Tables"]["logo_collections"]["Row"]
 type Logo = Database["public"]["Tables"]["logos"]["Row"]
@@ -25,11 +20,6 @@ interface CollectionViewProps {
 
 export function CollectionView({ collection, logos: initialLogos }: CollectionViewProps) {
   const [logos, setLogos] = useState<Logo[]>(initialLogos)
-  const [selectedLogo, setSelectedLogo] = useState<Logo | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
-  const [isSharing, setIsSharing] = useState(false)
-  const { user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
   const supabase = createClient()
@@ -43,12 +33,11 @@ export function CollectionView({ collection, logos: initialLogos }: CollectionVi
       // Optimistically update the UI
       setLogos((prev) => prev.map((l) => (l.id === logoId ? { ...l, is_favorite: !l.is_favorite } : l)))
 
-      // Update in the database
+      // Update in the database - RLS will ensure the user can only update their own logos
       const { error } = await supabase
         .from("logos")
         .update({ is_favorite: !logo.is_favorite, updated_at: new Date().toISOString() })
         .eq("id", logoId)
-        .eq("user_id", user?.id)
 
       if (error) {
         throw error
@@ -70,7 +59,7 @@ export function CollectionView({ collection, logos: initialLogos }: CollectionVi
       // Optimistically update the UI
       setLogos((prev) => prev.filter((l) => l.id !== logoId))
 
-      // Remove from the collection
+      // Remove from the collection - RLS will ensure the user can only remove from their own collections
       const { error } = await supabase
         .from("logo_collection_items")
         .delete()
@@ -97,18 +86,20 @@ export function CollectionView({ collection, logos: initialLogos }: CollectionVi
     }
   }
 
-  const handleLogoUpdated = (logoId: string, updatedSvg: string) => {
-    setLogos((prev) =>
-      prev.map((logo) =>
-        logo.id === logoId ? { ...logo, svg_content: updatedSvg, updated_at: new Date().toISOString() } : logo,
-      ),
-    )
-    setIsEditing(false)
-    setSelectedLogo(null)
+  const downloadSvg = (svg: string, name: string) => {
+    const blob = new Blob([svg], { type: "image/svg+xml" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${name}.svg`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
 
     toast({
-      title: "Logo updated",
-      description: "Your logo has been updated successfully",
+      title: "Logo downloaded",
+      description: "Your logo has been downloaded successfully",
     })
   }
 
@@ -137,14 +128,7 @@ export function CollectionView({ collection, logos: initialLogos }: CollectionVi
             <Card key={logo.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="aspect-square bg-white p-4 flex items-center justify-center">
-                  <LogoImage
-                    svgContent={logo.svg_content}
-                    sizes={generateSizes({
-                      sm: "50vw",
-                      md: "33vw",
-                      lg: "25vw",
-                    })}
-                  />
+                  <LogoImage svgContent={logo.svg_content} />
                 </div>
                 <div className="p-3">
                   <p className="text-sm truncate mb-2" title={logo.prompt}>
@@ -162,32 +146,9 @@ export function CollectionView({ collection, logos: initialLogos }: CollectionVi
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => {
-                        setSelectedLogo(logo)
-                        setIsEditing(true)
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setSelectedLogo(logo)
-                        setIsExporting(true)
-                      }}
+                      onClick={() => downloadSvg(logo.svg_content, `logo-${logo.id.substring(0, 8)}`)}
                     >
                       <Download className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setSelectedLogo(logo)
-                        setIsSharing(true)
-                      }}
-                    >
-                      <Share2 className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => removeFromCollection(logo.id)}>
                       <Trash2 className="h-4 w-4" />
@@ -199,19 +160,6 @@ export function CollectionView({ collection, logos: initialLogos }: CollectionVi
           ))}
         </div>
       )}
-
-      {/* Logo Editor Dialog */}
-      {selectedLogo && isEditing && (
-        <LogoEditor logo={selectedLogo} open={isEditing} onOpenChange={setIsEditing} onSave={handleLogoUpdated} />
-      )}
-
-      {/* Export Options Dialog */}
-      {selectedLogo && isExporting && (
-        <ExportOptions logo={selectedLogo} open={isExporting} onOpenChange={setIsExporting} />
-      )}
-
-      {/* Share Logo Dialog */}
-      {selectedLogo && isSharing && <ShareLogo logo={selectedLogo} open={isSharing} onOpenChange={setIsSharing} />}
     </div>
   )
 }
