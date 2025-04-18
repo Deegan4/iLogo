@@ -22,7 +22,8 @@ const nextConfig = {
     unoptimized: true,
   },
   experimental: {
-    optimizeCss: true,
+    // Removing optimizeCss since critters is missing
+    // optimizeCss: true,
     optimizePackageImports: ['lucide-react'],
   },
 }
