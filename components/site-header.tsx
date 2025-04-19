@@ -25,7 +25,13 @@ const PLAN_LIMITS = {
   pro: { name: "Pro" },
 }
 
-export function SiteHeader({ demoMode, setDemoMode }: SiteHeaderProps) {
+export function SiteHeader({
+  demoMode = false,
+  setDemoMode = () => {},
+}: {
+  demoMode?: boolean
+  setDemoMode?: (demoMode: boolean) => void
+}) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user, isLoading, plan } = useAuth()

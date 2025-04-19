@@ -2,8 +2,21 @@ import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
+// Enable debug mode for detailed logging
+const DEBUG_ROUTING = process.env.NODE_ENV === "development" || process.env.DEBUG_ROUTING === "true"
+
 export async function middleware(req: NextRequest) {
   try {
+    const startTime = Date.now()
+    const pathname = req.nextUrl.pathname
+
+    // Log the incoming request
+    if (DEBUG_ROUTING) {
+      console.log(`[Route] 🔍 Request: ${req.method} ${pathname}`)
+      console.log(`[Route] 📌 Referrer: ${req.headers.get("referer") || "direct"}`)
+      console.log(`[Route] 🌐 User-Agent: ${req.headers.get("user-agent")}`)
+    }
+
     // Create a response object that we can modify
     const res = NextResponse.next()
 
@@ -14,16 +27,24 @@ export async function middleware(req: NextRequest) {
     const userAgent = req.headers.get("user-agent") || ""
     const isSafari = userAgent.includes("Safari") && !userAgent.includes("Chrome")
 
+    if (DEBUG_ROUTING && isSafari) {
+      console.log(`[Route] 🧭 Safari browser detected`)
+    }
+
     // Refresh session if expired - required for Server Components
     // Add extra error handling for Safari
     try {
-      await supabase.auth.getSession()
+      const { data } = await supabase.auth.getSession()
+
+      if (DEBUG_ROUTING) {
+        console.log(`[Route] 🔐 Auth: ${data.session ? "Authenticated" : "Unauthenticated"}`)
+      }
     } catch (error) {
-      console.error("Error refreshing session in middleware:", error)
+      console.error("[Route] ❌ Error refreshing session in middleware:", error)
 
       // If this is a protected route and we're in Safari, handle differently
-      if (isSafari && isProtectedRoute(req.nextUrl.pathname)) {
-        // For Safari, redirect to sign in if session refresh fails on protected routes
+      if (isSafari && isProtectedRoute(pathname)) {
+        console.log(`[Route] 🔄 Redirecting to /auth/signin (Safari + protected route)`)
         return NextResponse.redirect(new URL("/auth/signin", req.url))
       }
     }
@@ -36,13 +57,27 @@ export async function middleware(req: NextRequest) {
     }
 
     // Check if the request is for the auth page and redirect to sign-in if it's just /auth
-    if (req.nextUrl.pathname === "/auth") {
+    if (pathname === "/auth") {
+      if (DEBUG_ROUTING) {
+        console.log(`[Route] 🔄 Redirecting /auth to /auth/signin`)
+      }
       return NextResponse.redirect(new URL("/auth/signin", req.url))
+    }
+
+    // Log protected routes
+    if (DEBUG_ROUTING && isProtectedRoute(pathname)) {
+      console.log(`[Route] 🔒 Protected route: ${pathname}`)
+    }
+
+    // Log the response time
+    if (DEBUG_ROUTING) {
+      const duration = Date.now() - startTime
+      console.log(`[Route] ⏱️ Middleware processed in ${duration}ms`)
     }
 
     return res
   } catch (error) {
-    console.error("Unexpected error in middleware:", error)
+    console.error("[Route] 💥 Unexpected error in middleware:", error)
     return NextResponse.next()
   }
 }
@@ -50,7 +85,14 @@ export async function middleware(req: NextRequest) {
 // Helper function to determine if a route should be protected
 function isProtectedRoute(pathname: string): boolean {
   const protectedPaths = ["/dashboard", "/collections", "/profile"]
-  return protectedPaths.some((path) => pathname.startsWith(path))
+  // Check if the path exactly matches or starts with one of the protected paths
+  const isProtected = protectedPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+
+  if (DEBUG_ROUTING && isProtected) {
+    console.log(`[Route] 🔒 Route ${pathname} is protected`)
+  }
+
+  return isProtected
 }
 
 export const config = {
@@ -62,7 +104,8 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      * - public files
+     * - api routes
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|public/|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css)$).*)",
   ],
 }

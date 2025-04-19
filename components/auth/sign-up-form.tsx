@@ -10,48 +10,33 @@ import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, AlertTriangle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2 } from "lucide-react"
+import { PasswordStrengthChecker } from "./password-strength-checker"
 
-export function SignUpForm() {
+interface SignUpFormProps {
+  onSuccess?: () => void
+}
+
+export function SignUpForm({ onSuccess }: SignUpFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [fullName, setFullName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [isPasswordValid, setIsPasswordValid] = useState(false)
   const { signUp } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
-  // Password strength validation
-  const validatePassword = (password: string): boolean => {
-    // Reset previous error
-    setPasswordError(null)
-
-    // Check password length
-    if (password.length < 8) {
-      setPasswordError("Password must be at least 8 characters long")
-      return false
-    }
-
-    // Check for at least one uppercase letter, one lowercase letter, and one number
-    const hasUppercase = /[A-Z]/.test(password)
-    const hasLowercase = /[a-z]/.test(password)
-    const hasNumber = /[0-9]/.test(password)
-
-    if (!hasUppercase || !hasLowercase || !hasNumber) {
-      setPasswordError("Password must contain at least one uppercase letter, one lowercase letter, and one number")
-      return false
-    }
-
-    return true
+  const handlePasswordValidationChange = (isValid: boolean, message?: string) => {
+    setIsPasswordValid(isValid)
+    setPasswordError(message || null)
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
-    setPasswordError(null)
 
     // Validate passwords match
     if (password !== confirmPassword) {
@@ -64,8 +49,13 @@ export function SignUpForm() {
       return
     }
 
-    // Validate password strength
-    if (!validatePassword(password)) {
+    // Check if password is valid according to our strength checker
+    if (!isPasswordValid) {
+      toast({
+        variant: "destructive",
+        title: "Password is not secure enough",
+        description: passwordError || "Please choose a stronger password.",
+      })
       setIsLoading(false)
       return
     }
@@ -74,7 +64,7 @@ export function SignUpForm() {
       const { error } = await signUp(email, password, { fullName })
 
       if (error) {
-        // Check for compromised password error
+        // Check for compromised password error from Supabase
         if (
           error.message?.includes("been pwned") ||
           error.message?.includes("compromised") ||
@@ -95,6 +85,7 @@ export function SignUpForm() {
             description: error.message || "Please check your information and try again.",
           })
         }
+        setIsLoading(false)
         return
       }
 
@@ -104,8 +95,13 @@ export function SignUpForm() {
         description: "Please check your email to verify your account.",
       })
 
-      // Redirect to sign-in page or confirmation page
-      router.push("/auth/verification-sent")
+      // Call onSuccess if provided
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        // Redirect to sign-in page or confirmation page
+        router.push("/auth/verification-sent")
+      }
     } catch (error) {
       toast({
         variant: "destructive",
@@ -157,24 +153,15 @@ export function SignUpForm() {
             type="password"
             placeholder="••••••••"
             value={password}
-            onChange={(e) => {
-              setPassword(e.target.value)
-              // Clear error when user starts typing again
-              if (passwordError) setPasswordError(null)
-            }}
+            onChange={(e) => setPassword(e.target.value)}
             required
             disabled={isLoading}
-            className={passwordError ? "border-red-500" : ""}
           />
-          {passwordError && (
-            <Alert variant="destructive" className="mt-2">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{passwordError}</AlertDescription>
-            </Alert>
+
+          {/* Password strength checker */}
+          {password.length > 0 && (
+            <PasswordStrengthChecker password={password} onValidationChange={handlePasswordValidationChange} />
           )}
-          <p className="text-xs text-muted-foreground mt-1">
-            Password must be at least 8 characters and include uppercase, lowercase, and numbers
-          </p>
         </div>
 
         <div className="space-y-2">

@@ -7,6 +7,9 @@ import { Suspense } from "react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ScrollToTop } from "@/components/scroll-to-top"
+import { SiteHeader } from "@/components/site-header"
+import { SiteFooter } from "@/components/site-footer"
+import { RouteTracker } from "@/components/route-tracker"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -41,7 +44,13 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
-            <Suspense>{children}</Suspense>
+            <Suspense>
+              {/* Add the RouteTracker component */}
+              <RouteTracker />
+              <SiteHeader demoMode={false} setDemoMode={() => {}} />
+              <main className="min-h-screen pt-16">{children}</main>
+              <SiteFooter />
+            </Suspense>
             <ScrollToTop />
           </AuthProvider>
         </ThemeProvider>

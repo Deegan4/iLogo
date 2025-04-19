@@ -1,4 +1,10 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export interface Database {
   public: {
@@ -68,11 +74,10 @@ export interface Database {
             columns: ["user_id"]
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-            
           },
         ]
       }
-       logo_collection_items: {
+      logo_collection_items: {
         Row: {
           collection_id: string
           logo_id: string
@@ -137,7 +142,7 @@ export interface Database {
           },
         ]
       }
-       contacts: {
+      contacts: {
         Row: {
           id: string
           name: string

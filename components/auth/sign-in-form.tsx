@@ -10,8 +10,10 @@ import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertTriangle } from "lucide-react"
 import { SocialLoginButtons } from "./social-login-buttons"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { usePasswordSecurity } from "@/hooks/use-password-security"
 
 interface SignInFormProps {
   onSuccess?: () => void
@@ -21,15 +23,32 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingPassword, setIsCheckingPassword] = useState(false)
+  const [passwordWarning, setPasswordWarning] = useState<string | null>(null)
   const { signIn } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const { checkPassword } = usePasswordSecurity()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
+    setPasswordWarning(null)
 
     try {
+      // Check if password has been compromised
+      setIsCheckingPassword(true)
+      const passwordCheck = await checkPassword(password)
+      setIsCheckingPassword(false)
+
+      if (passwordCheck.isPwned) {
+        // Show warning but allow sign-in to continue
+        setPasswordWarning(
+          `Warning: This password has been found in ${passwordCheck.breachCount} data breaches. ` +
+            `We recommend changing your password after signing in.`,
+        )
+      }
+
       const { error } = await signIn(email, password)
 
       if (error) {
@@ -38,6 +57,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
           title: "Sign in failed",
           description: error.message || "Please check your credentials and try again.",
         })
+        setIsLoading(false)
         return
       }
 
@@ -59,7 +79,6 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
         description: "Please try again later.",
       })
       console.error("Sign in error:", error)
-    } finally {
       setIsLoading(false)
     }
   }
@@ -101,11 +120,26 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        {passwordWarning && (
+          <Alert
+            variant="destructive"
+            className="bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{passwordWarning}</AlertDescription>
+          </Alert>
+        )}
+
+        <Button type="submit" className="w-full" disabled={isLoading || isCheckingPassword}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Signing in...
+            </>
+          ) : isCheckingPassword ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Checking password...
             </>
           ) : (
             "Sign In"

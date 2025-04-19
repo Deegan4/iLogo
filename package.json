@@ -70,9 +70,10 @@
     "@supabase/auth-helpers-nextjs": "latest",
     "react-intersection-observer": "latest",
     "framer-motion": "latest",
-    "@vercel/analytics": "latest",
     "@vercel/blob": "latest",
-    "nanoid": "latest"
+    "nanoid": "latest",
+    "@vercel/analytics": "latest",
+    "crypto": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

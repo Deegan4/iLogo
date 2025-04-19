@@ -1,7 +1,19 @@
+"use client"
+
+import { useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { log404 } from "@/lib/route-logger"
 
 export default function NotFound() {
+  useEffect(() => {
+    // Log the 404 error
+    const path = typeof window !== "undefined" ? window.location.pathname : ""
+    const referrer = typeof document !== "undefined" ? document.referrer : ""
+
+    log404(path, referrer)
+  }, [])
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
       <h1 className="text-6xl font-bold mb-4">404</h1>

@@ -31,7 +31,7 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "sign-in" }: AuthD
           </DialogDescription>
         </DialogHeader>
         <Tabs
-          defaultValue="sign-in"
+          defaultValue={defaultTab}
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as "sign-in" | "sign-up")}
         >
