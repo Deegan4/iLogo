@@ -3,72 +3,86 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Loader2 } from "lucide-react"
+import { SocialLoginButtons } from "./social-login-buttons"
 
-export function SignInForm() {
+interface SignInFormProps {
+  onSuccess?: () => void
+}
+
+export function SignInForm({ onSuccess }: SignInFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
   const { signIn } = useAuth()
+  const router = useRouter()
+  const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
-    setError(null)
 
     try {
       const { error } = await signIn(email, password)
 
       if (error) {
-        setError(error.message)
+        toast({
+          variant: "destructive",
+          title: "Sign in failed",
+          description: error.message || "Please check your credentials and try again.",
+        })
         return
       }
 
-      router.push("/dashboard")
-    } catch (err) {
-      console.error("Sign in error:", err)
-      setError("An unexpected error occurred")
+      // Success
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
+      })
+
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        router.push("/dashboard")
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "An error occurred",
+        description: "Please try again later.",
+      })
+      console.error("Sign in error:", error)
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-      <div className="flex flex-col space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Sign In</h1>
-        <p className="text-sm text-muted-foreground">Enter your email and password to sign in</p>
-      </div>
+    <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label
-            htmlFor="email"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Email
-          </label>
-          <input
+          <Label htmlFor="email">Email</Label>
+          <Input
             id="email"
             type="email"
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             placeholder="name@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={isLoading}
           />
         </div>
+
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label
-              htmlFor="password"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Password
-            </label>
+            <Label htmlFor="password">Password</Label>
             <Link
               href="/auth/forgot-password"
               className="text-sm font-medium text-primary underline-offset-4 hover:underline"
@@ -76,31 +90,46 @@ export function SignInForm() {
               Forgot password?
             </Link>
           </div>
-          <input
+          <Input
             id="password"
             type="password"
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={isLoading}
           />
         </div>
-        {error && <div className="text-sm text-red-500">{error}</div>}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="inline-flex h-9 w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-        >
-          {isLoading ? "Signing in..." : "Sign In"}
-        </button>
+
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Signing in...
+            </>
+          ) : (
+            "Sign In"
+          )}
+        </Button>
       </form>
-      <p className="px-8 text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Link href="/auth/signup" className="text-primary underline-offset-4 hover:underline">
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+        </div>
+      </div>
+
+      <SocialLoginButtons />
+
+      <div className="text-center text-sm">
+        Don't have an account?{" "}
+        <Link href="/auth/signup" className="font-medium text-primary underline-offset-4 hover:underline">
           Sign up
         </Link>
-      </p>
+      </div>
     </div>
   )
 }

@@ -3,12 +3,13 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Menu, X } from "lucide-react"
+import { Menu, X, Crown } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button-custom"
 import { UserMenu } from "@/components/auth/user-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { UsageLimits } from "@/components/usage-limits"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { useMobile } from "@/hooks/use-mobile"
@@ -19,10 +20,15 @@ interface SiteHeaderProps {
   setDemoMode: (demoMode: boolean) => void
 }
 
+const PLAN_LIMITS = {
+  free: { name: "Free" },
+  pro: { name: "Pro" },
+}
+
 export function SiteHeader({ demoMode, setDemoMode }: SiteHeaderProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, plan } = useAuth()
   const isMobile = useMobile()
   const { scrollY } = useScrollPosition()
 
@@ -110,7 +116,7 @@ export function SiteHeader({ demoMode, setDemoMode }: SiteHeaderProps) {
               iLogo
             </span>
           </Link>
-          <nav className="hidden gap-6 md:flex">
+          <nav className="flex gap-6 md:flex">
             <Link
               href="/"
               className={cn(
@@ -125,11 +131,14 @@ export function SiteHeader({ demoMode, setDemoMode }: SiteHeaderProps) {
               Home
               <span className="absolute -bottom-1 left-0 h-0.5 bg-foreground/70 w-0 group-hover:w-full transition-all duration-300 ease-in-out"></span>
             </Link>
+
+            {user && <UsageLimits headerVariant />}
+
             {user && (
               <Link
                 href="/dashboard"
                 className={cn(
-                  "flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group",
+                  "hidden md:flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group",
                   pathname === "/dashboard" ? "text-foreground" : "text-muted-foreground",
                 )}
                 onClick={(e) => {
@@ -141,11 +150,12 @@ export function SiteHeader({ demoMode, setDemoMode }: SiteHeaderProps) {
                 <span className="absolute -bottom-1 left-0 h-0.5 bg-foreground/70 w-0 group-hover:w-full transition-all duration-300 ease-in-out"></span>
               </Link>
             )}
+
             {user && (
               <Link
                 href="/profile"
                 className={cn(
-                  "flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group",
+                  "hidden md:flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group",
                   pathname === "/profile" ? "text-foreground" : "text-muted-foreground",
                 )}
                 onClick={(e) => {
@@ -250,6 +260,15 @@ export function SiteHeader({ demoMode, setDemoMode }: SiteHeaderProps) {
                     <span className="group-hover:translate-x-1 transition-transform duration-200">Home</span>
                   </Link>
                 </motion.div>
+
+                {user && (
+                  <motion.div variants={itemVariants}>
+                    <div className="flex items-center text-sm font-medium py-2 text-muted-foreground">
+                      <Crown className="h-3.5 w-3.5 text-primary mr-1" />
+                      <span>{PLAN_LIMITS[plan || "free"].name} Plan</span>
+                    </div>
+                  </motion.div>
+                )}
 
                 {user && (
                   <motion.div variants={itemVariants}>

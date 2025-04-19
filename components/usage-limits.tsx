@@ -6,13 +6,14 @@ import { checkDailyGenerationLimit, PLAN_LIMITS, type PlanType, getUserPlan } fr
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button-custom"
-import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, Crown } from "lucide-react"
 
 interface UsageLimitsProps {
   onUpgrade?: () => void
+  headerVariant?: boolean
 }
 
-export function UsageLimits({ onUpgrade }: UsageLimitsProps) {
+export function UsageLimits({ onUpgrade, headerVariant = false }: UsageLimitsProps) {
   const { user } = useAuth()
   const [usageData, setUsageData] = useState<{
     canGenerate: boolean
@@ -45,7 +46,9 @@ export function UsageLimits({ onUpgrade }: UsageLimitsProps) {
   }, [user])
 
   if (isLoading) {
-    return (
+    return headerVariant ? (
+      <div className="text-xs text-muted-foreground animate-pulse">Loading...</div>
+    ) : (
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Usage Limits</CardTitle>
@@ -62,6 +65,20 @@ export function UsageLimits({ onUpgrade }: UsageLimitsProps) {
   const percentage = Math.round((usageData.used / usageData.limit) * 100)
   const planDetails = PLAN_LIMITS[plan]
 
+  // Render compact header variant
+  if (headerVariant) {
+    return (
+      <div className="flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group">
+        <span className="flex items-center gap-1">
+          <Crown className="h-3.5 w-3.5 text-primary" />
+          <span>{planDetails.name} Plan</span>
+        </span>
+        <span className="absolute -bottom-1 left-0 h-0.5 bg-foreground/70 w-0 group-hover:w-full transition-all duration-300 ease-in-out"></span>
+      </div>
+    )
+  }
+
+  // Original full card version
   return (
     <Card>
       <CardHeader>

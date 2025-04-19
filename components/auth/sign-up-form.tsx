@@ -10,7 +10,8 @@ import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertTriangle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function SignUpForm() {
   const [email, setEmail] = useState("")
@@ -18,13 +19,39 @@ export function SignUpForm() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [fullName, setFullName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
   const { signUp } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
+  // Password strength validation
+  const validatePassword = (password: string): boolean => {
+    // Reset previous error
+    setPasswordError(null)
+
+    // Check password length
+    if (password.length < 8) {
+      setPasswordError("Password must be at least 8 characters long")
+      return false
+    }
+
+    // Check for at least one uppercase letter, one lowercase letter, and one number
+    const hasUppercase = /[A-Z]/.test(password)
+    const hasLowercase = /[a-z]/.test(password)
+    const hasNumber = /[0-9]/.test(password)
+
+    if (!hasUppercase || !hasLowercase || !hasNumber) {
+      setPasswordError("Password must contain at least one uppercase letter, one lowercase letter, and one number")
+      return false
+    }
+
+    return true
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
+    setPasswordError(null)
 
     // Validate passwords match
     if (password !== confirmPassword) {
@@ -37,15 +64,37 @@ export function SignUpForm() {
       return
     }
 
+    // Validate password strength
+    if (!validatePassword(password)) {
+      setIsLoading(false)
+      return
+    }
+
     try {
       const { error } = await signUp(email, password, { fullName })
 
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Sign up failed",
-          description: error.message || "Please check your information and try again.",
-        })
+        // Check for compromised password error
+        if (
+          error.message?.includes("been pwned") ||
+          error.message?.includes("compromised") ||
+          error.message?.includes("breach")
+        ) {
+          setPasswordError(
+            "This password has been found in a data breach. Please choose a different password for your security.",
+          )
+          toast({
+            variant: "destructive",
+            title: "Compromised password",
+            description: "Please choose a different password for your security.",
+          })
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Sign up failed",
+            description: error.message || "Please check your information and try again.",
+          })
+        }
         return
       }
 
@@ -108,10 +157,24 @@ export function SignUpForm() {
             type="password"
             placeholder="••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              // Clear error when user starts typing again
+              if (passwordError) setPasswordError(null)
+            }}
             required
             disabled={isLoading}
+            className={passwordError ? "border-red-500" : ""}
           />
+          {passwordError && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{passwordError}</AlertDescription>
+            </Alert>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            Password must be at least 8 characters and include uppercase, lowercase, and numbers
+          </p>
         </div>
 
         <div className="space-y-2">
