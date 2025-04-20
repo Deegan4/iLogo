@@ -1,3 +1,6 @@
+// Add the dynamic directive to ensure this page is rendered at request time
+export const dynamic = "force-dynamic"
+
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { EnhancedSignInForm } from "@/components/auth/enhanced-sign-in-form"

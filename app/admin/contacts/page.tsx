@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { ContactsList } from "@/components/admin/contacts-list"
 
-// Fix: Use hyphen instead of underscore
+// Fix the dynamic directive to use the correct format
 export const dynamic = "force-dynamic"
 
 export const metadata = {

@@ -1,3 +1,8 @@
+// Remove the "use client" directive if it exists
+
+// Add the dynamic directive to ensure this page is rendered at request time
+export const dynamic = "force-dynamic"
+
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
