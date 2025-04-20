@@ -17,12 +17,20 @@ export default function ContactPage() {
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Contact Us</h1>
-          <Button variant="outline" size="sm" asChild className="flex items-center gap-2">
-            <Link href="/">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Main Menu</span>
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/">
+                <Home className="h-4 w-4 mr-2" />
+                Home
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <p className="text-muted-foreground mb-8">

@@ -3,13 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Menu, X, Crown } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button-custom"
 import { UserMenu } from "@/components/auth/user-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { UsageLimits } from "@/components/usage-limits"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { useMobile } from "@/hooks/use-mobile"
@@ -20,21 +19,10 @@ interface SiteHeaderProps {
   setDemoMode: (demoMode: boolean) => void
 }
 
-const PLAN_LIMITS = {
-  free: { name: "Free" },
-  pro: { name: "Pro" },
-}
-
-export function SiteHeader({
-  demoMode = false,
-  setDemoMode = () => {},
-}: {
-  demoMode?: boolean
-  setDemoMode?: (demoMode: boolean) => void
-}) {
+export function SiteHeader({ demoMode, setDemoMode }: SiteHeaderProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { user, isLoading, plan } = useAuth()
+  const { user, isLoading } = useAuth()
   const isMobile = useMobile()
   const { scrollY } = useScrollPosition()
 
@@ -104,14 +92,14 @@ export function SiteHeader({
   return (
     <header
       className={cn(
-        "fixed top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-top transition-all duration-300",
+        "fixed top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-top transition-all duration-300",
         isCompact ? "shadow-md" : "",
       )}
     >
       <div
         className={cn(
-          "container flex items-center justify-between transition-all duration-300",
-          isCompact ? "h-14" : "h-14 sm:h-16",
+          "container flex items-center justify-between transition-all duration-300 py-1",
+          isCompact ? "h-12" : "h-12 sm:h-14",
         )}
       >
         <div className="flex items-center gap-2">
@@ -122,7 +110,7 @@ export function SiteHeader({
               iLogo
             </span>
           </Link>
-          <nav className="flex gap-6 md:flex">
+          <nav className="hidden gap-6 md:flex">
             <Link
               href="/"
               className={cn(
@@ -137,14 +125,11 @@ export function SiteHeader({
               Home
               <span className="absolute -bottom-1 left-0 h-0.5 bg-foreground/70 w-0 group-hover:w-full transition-all duration-300 ease-in-out"></span>
             </Link>
-
-            {user && <UsageLimits headerVariant />}
-
             {user && (
               <Link
                 href="/dashboard"
                 className={cn(
-                  "hidden md:flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group",
+                  "flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group",
                   pathname === "/dashboard" ? "text-foreground" : "text-muted-foreground",
                 )}
                 onClick={(e) => {
@@ -156,12 +141,11 @@ export function SiteHeader({
                 <span className="absolute -bottom-1 left-0 h-0.5 bg-foreground/70 w-0 group-hover:w-full transition-all duration-300 ease-in-out"></span>
               </Link>
             )}
-
             {user && (
               <Link
                 href="/profile"
                 className={cn(
-                  "hidden md:flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group",
+                  "flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group",
                   pathname === "/profile" ? "text-foreground" : "text-muted-foreground",
                 )}
                 onClick={(e) => {
@@ -170,6 +154,22 @@ export function SiteHeader({
                 }}
               >
                 Profile
+                <span className="absolute -bottom-1 left-0 h-0.5 bg-foreground/70 w-0 group-hover:w-full transition-all duration-300 ease-in-out"></span>
+              </Link>
+            )}
+            {user && (
+              <Link
+                href="/storage-test"
+                className={cn(
+                  "flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground relative z-10 group",
+                  pathname === "/storage-test" ? "text-foreground" : "text-muted-foreground",
+                )}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // Navigate to storage test page
+                }}
+              >
+                Storage Test
                 <span className="absolute -bottom-1 left-0 h-0.5 bg-foreground/70 w-0 group-hover:w-full transition-all duration-300 ease-in-out"></span>
               </Link>
             )}
@@ -269,15 +269,6 @@ export function SiteHeader({
 
                 {user && (
                   <motion.div variants={itemVariants}>
-                    <div className="flex items-center text-sm font-medium py-2 text-muted-foreground">
-                      <Crown className="h-3.5 w-3.5 text-primary mr-1" />
-                      <span>{PLAN_LIMITS[plan || "free"].name} Plan</span>
-                    </div>
-                  </motion.div>
-                )}
-
-                {user && (
-                  <motion.div variants={itemVariants}>
                     <Link
                       href="/dashboard"
                       className={cn(
@@ -308,6 +299,24 @@ export function SiteHeader({
                       }}
                     >
                       <span className="group-hover:translate-x-1 transition-transform duration-200">Profile</span>
+                    </Link>
+                  </motion.div>
+                )}
+
+                {user && (
+                  <motion.div variants={itemVariants}>
+                    <Link
+                      href="/storage-test"
+                      className={cn(
+                        "flex items-center text-sm font-medium transition-all duration-200 hover:text-foreground py-2 relative z-10 group",
+                        pathname === "/storage-test" ? "text-foreground" : "text-muted-foreground",
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setMobileMenuOpen(false)
+                      }}
+                    >
+                      <span className="group-hover:translate-x-1 transition-transform duration-200">Storage Test</span>
                     </Link>
                   </motion.div>
                 )}

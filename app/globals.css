@@ -136,6 +136,7 @@
 
 /* Mobile-first responsive utilities */
 @layer utilities {
+  /* Existing utilities */
   .touch-action-none {
     touch-action: none;
   }
@@ -156,14 +157,22 @@
     padding-right: env(safe-area-inset-right);
   }
 
-  /* Hide scrollbars but keep functionality */
-  .scrollbar-hide {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+  /* New iOS optimization utilities */
+  .ios-hardware-accelerated {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
   }
 
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+  .ios-no-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ios-smooth-scroll {
+    -webkit-overflow-scrolling: touch;
   }
 }
 

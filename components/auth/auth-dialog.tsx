@@ -9,11 +9,10 @@ import { SignUpForm } from "./sign-up-form"
 interface AuthDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  defaultTab?: "sign-in" | "sign-up"
 }
 
-export function AuthDialog({ open, onOpenChange, defaultTab = "sign-in" }: AuthDialogProps) {
-  const [activeTab, setActiveTab] = useState<"sign-in" | "sign-up">(defaultTab)
+export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
+  const [activeTab, setActiveTab] = useState<"sign-in" | "sign-up">("sign-in")
 
   const handleSuccess = () => {
     onOpenChange(false)
@@ -31,7 +30,7 @@ export function AuthDialog({ open, onOpenChange, defaultTab = "sign-in" }: AuthD
           </DialogDescription>
         </DialogHeader>
         <Tabs
-          defaultValue={defaultTab}
+          defaultValue="sign-in"
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as "sign-in" | "sign-up")}
         >

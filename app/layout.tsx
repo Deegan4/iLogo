@@ -7,10 +7,11 @@ import { Suspense } from "react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ScrollToTop } from "@/components/scroll-to-top"
-import { SiteHeader } from "@/components/site-header"
-import { SiteFooter } from "@/components/site-footer"
-import { RouteTracker } from "@/components/route-tracker"
 import "./globals.css"
+
+// Add this at the top of the file with the other imports
+import { ErrorBoundary } from "@/components/error-boundary"
+import { AuthErrorFallback } from "@/components/auth/auth-error-fallback"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -43,16 +44,12 @@ export default function RootLayout({
     <html lang="en" className="antialiased">
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            <Suspense>
-              {/* Add the RouteTracker component */}
-              <RouteTracker />
-              <SiteHeader demoMode={false} setDemoMode={() => {}} />
-              <main className="min-h-screen pt-16">{children}</main>
-              <SiteFooter />
-            </Suspense>
-            <ScrollToTop />
-          </AuthProvider>
+          <ErrorBoundary fallback={<AuthErrorFallback />}>
+            <AuthProvider>
+              <Suspense>{children}</Suspense>
+              <ScrollToTop />
+            </AuthProvider>
+          </ErrorBoundary>
         </ThemeProvider>
         <Analytics />
       </body>

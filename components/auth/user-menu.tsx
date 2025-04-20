@@ -4,143 +4,75 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button-custom"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Loader2, LogOut, Settings, User, Grid, FolderOpen, Crown } from "lucide-react"
-import { AuthDialog } from "@/components/auth/auth-dialog"
 
 export function UserMenu() {
-  const { user, signOut, isLoading, plan } = useAuth()
-  const [showAuthDialog, setShowAuthDialog] = useState(false)
-  const [isSigningOut, setIsSigningOut] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+  const { user, signOut, isLoading } = useAuth()
   const router = useRouter()
 
   const handleSignOut = async () => {
-    try {
-      setIsSigningOut(true)
-      await signOut()
-      // Router navigation is handled in the signOut function
-    } catch (error) {
-      console.error("Error signing out:", error)
-      setIsSigningOut(false)
-    }
+    await signOut()
+    setIsOpen(false)
+    router.push("/")
   }
 
-  // Show loading state
   if (isLoading) {
-    return (
-      <Button variant="ghost" size="icon" disabled className="relative h-8 w-8 rounded-full">
-        <Loader2 className="h-4 w-4 animate-spin" />
-      </Button>
-    )
+    return <div className="h-8 w-8 rounded-full bg-muted animate-pulse"></div>
   }
 
-  // Show sign in button if not authenticated
   if (!user) {
     return (
-      <>
-        <Button variant="outline" size="sm" onClick={() => setShowAuthDialog(true)}>
-          Sign In
-        </Button>
-        <AuthDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} defaultTab="sign-in" />
-      </>
+      <Link
+        href="/auth/signin"
+        className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        Sign In
+      </Link>
     )
   }
 
-  // Get user initials for avatar fallback
-  const getInitials = () => {
-    if (!user.email) return "U"
-    return user.email.charAt(0).toUpperCase()
-  }
-
-  // Get plan display name
-  const getPlanName = () => {
-    switch (plan) {
-      case "pro":
-        return "Pro"
-      case "enterprise":
-        return "Enterprise"
-      default:
-        return "Free"
-    }
-  }
-
-  // Show user menu if authenticated
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.user_metadata?.avatar_url || "/placeholder.svg"} alt={user.email || "User"} />
-            <AvatarFallback>{getInitials()}</AvatarFallback>
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.email}</p>
-            <p className="text-xs leading-none text-muted-foreground flex items-center">
-              <Crown className="h-3 w-3 text-primary mr-1" />
-              {getPlanName()} Plan
-            </p>
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
+        aria-expanded={isOpen}
+      >
+        {user.email?.[0].toUpperCase() || "U"}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-56 rounded-md bg-background shadow-lg ring-1 ring-black ring-opacity-5">
+          <div className="py-1" role="menu" aria-orientation="vertical">
+            <div className="px-4 py-2 text-sm text-muted-foreground">{user.email}</div>
+            <div className="border-t border-border"></div>
+            <Link
+              href="/dashboard"
+              className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
+              onClick={() => setIsOpen(false)}
+              role="menuitem"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/profile"
+              className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
+              onClick={() => setIsOpen(false)}
+              role="menuitem"
+            >
+              Profile
+            </Link>
+            <div className="border-t border-border"></div>
+            <button
+              onClick={handleSignOut}
+              className="block w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted"
+              role="menuitem"
+            >
+              Sign Out
+            </button>
           </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard" className="flex items-center cursor-pointer">
-              <Grid className="mr-2 h-4 w-4" />
-              <span>Dashboard</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/collections" className="flex items-center cursor-pointer">
-              <FolderOpen className="mr-2 h-4 w-4" />
-              <span>Collections</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/profile" className="flex items-center cursor-pointer">
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/settings" className="flex items-center cursor-pointer">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </Link>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer text-red-600 focus:text-red-600"
-          disabled={isSigningOut}
-          onClick={handleSignOut}
-        >
-          {isSigningOut ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Signing out...</span>
-            </>
-          ) : (
-            <>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign out</span>
-            </>
-          )}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </div>
+      )}
+    </div>
   )
 }

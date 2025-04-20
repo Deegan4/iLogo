@@ -1,46 +1,71 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import type React from "react"
+
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
-import type { User, Session, AuthError } from "@supabase/supabase-js"
+import { createClient, clearSupabaseClient } from "@/lib/supabase/client"
+import type { User, Session } from "@supabase/auth-helpers-nextjs"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 
-// Define the plan type
-export type PlanType = "free" | "basic" | "pro" | "enterprise"
-
-// Define the authentication context type
 type AuthContextType = {
   user: User | null
   session: Session | null
   isLoading: boolean
-  error: string | null
-  plan: PlanType
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string, metadata?: { [key: string]: any }) => Promise<{ error: AuthError | null }>
+  supabase: SupabaseClient<Database> | null
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUp: (email: string, password: string, options?: { fullName?: string }) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<{ error: AuthError | null }>
-  updateUser: (attributes: { [key: string]: any }) => Promise<{ error: AuthError | null }>
-  setAuthError: (error: string | null) => void
+  resetPassword: (email: string) => Promise<{ error: Error | null }>
+  updatePassword: (password: string) => Promise<{ error: Error | null }>
+  updateProfile: (data: { fullName?: string; avatarUrl?: string }) => Promise<{ error: Error | null }>
 }
 
-// Create the authentication context
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Create the authentication provider component
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [plan, setPlan] = useState<PlanType>("free")
+  const [supabase, setSupabase] = useState<SupabaseClient<Database> | null>(null)
   const router = useRouter()
-  const supabase = createClient()
 
-  // Detect Safari browser
-  const isSafari = typeof window !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-
-  // Initialize the auth state
+  // Initialize the Supabase client once
   useEffect(() => {
+    let isMounted = true
+
+    const initializeSupabase = async () => {
+      try {
+        // Get the singleton client
+        const client = createClient()
+
+        if (isMounted) {
+          setSupabase(client)
+        }
+      } catch (error) {
+        console.error("Failed to initialize Supabase client:", error)
+        // Set an initialization error state that can be used in the UI
+        if (isMounted) {
+          setIsLoading(false)
+          // We're not setting the user or session here, so they remain null
+        }
+      }
+    }
+
+    initializeSupabase()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  // Initialize the auth state once we have the Supabase client
+  useEffect(() => {
+    if (!supabase) return
+
+    let isMounted = true
+
     const initializeAuth = async () => {
       try {
         setIsLoading(true)
@@ -53,24 +78,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (sessionError) {
           console.error("Error getting session:", sessionError)
-          // Handle Safari-specific session errors
-          if (isSafari) {
-            console.log("Safari detected, handling session differently")
-          }
+          return
         }
 
-        if (currentSession) {
+        if (currentSession && isMounted) {
           setSession(currentSession)
           setUser(currentSession.user)
-
-          // Fetch user's plan (in a real app, this would come from your database)
-          // For now, we'll just set it to "free"
-          setPlan("free")
         }
       } catch (error) {
         console.error("Error initializing auth:", error)
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
@@ -80,135 +100,198 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession)
-      setUser(newSession?.user || null)
-
-      // Refresh the page data when auth state changes
-      router.refresh()
+      if (isMounted) {
+        setSession(newSession)
+        setUser(newSession?.user || null)
+        router.refresh()
+      }
     })
 
     // Clean up the subscription
     return () => {
+      isMounted = false
       subscription.unsubscribe()
     }
-  }, [supabase, router, isSafari])
+  }, [supabase, router])
 
-  // Sign in function
-  const signIn = async (email: string, password: string) => {
+  // Auth methods
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      if (!supabase) return { error: new Error("Supabase client not initialized") }
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        if (data?.user) {
+          setUser(data.user)
+        }
+
+        return { error }
+      } catch (error) {
+        console.error("Sign in error:", error)
+        return { error: error as Error }
+      }
+    },
+    [supabase],
+  )
+
+  const signUp = useCallback(
+    async (email: string, password: string, options?: { fullName?: string }) => {
+      if (!supabase) return { error: new Error("Supabase client not initialized") }
+
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: options?.fullName,
+            },
+            emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`,
+          },
+        })
+
+        if (data?.user) {
+          setUser(data.user)
+        }
+
+        return { error }
+      } catch (error) {
+        console.error("Sign up error:", error)
+        return { error: error as Error }
+      }
+    },
+    [supabase],
+  )
+
+  const signOut = useCallback(async () => {
+    if (!supabase) return
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      // Special handling for Safari
-      if (isSafari && !error) {
-        // Force a page refresh after successful sign-in on Safari
-        window.location.href = "/dashboard"
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error("Sign out error:", error)
+        return
       }
 
-      return { error }
-    } catch (error) {
-      console.error("Sign in error:", error)
-      return { error: error as AuthError }
-    }
-  }
+      setUser(null)
+      setSession(null)
 
-  // Sign up function
-  const signUp = async (email: string, password: string, metadata?: { [key: string]: any }) => {
-    try {
-      // Get the current site URL for the redirect
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")
+      // Clear the Supabase client to ensure a fresh instance on next login
+      clearSupabaseClient()
 
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${siteUrl}/auth/callback`,
-          data: metadata,
-        },
-      })
-
-      return { error }
-    } catch (error) {
-      console.error("Sign up error:", error)
-      return { error: error as AuthError }
-    }
-  }
-
-  // Reset password function
-  const resetPassword = async (email: string) => {
-    try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${siteUrl}/auth/reset-password`,
-      })
-
-      return { error }
-    } catch (error) {
-      console.error("Reset password error:", error)
-      return { error: error as AuthError }
-    }
-  }
-
-  // Update user function
-  const updateUser = async (attributes: { [key: string]: any }) => {
-    try {
-      const { error } = await supabase.auth.updateUser(attributes)
-      return { error }
-    } catch (error) {
-      console.error("Update user error:", error)
-      return { error: error as AuthError }
-    }
-  }
-
-  // Sign out function
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut()
-
-      // Special handling for Safari
-      if (isSafari) {
-        // Force a page refresh after sign-out on Safari
-        window.location.href = "/"
-      } else {
-        router.push("/")
-      }
+      router.push("/")
     } catch (error) {
       console.error("Sign out error:", error)
     }
-  }
+  }, [supabase, router])
 
-  // Set auth error function
-  const setAuthError = (error: string | null) => {
-    setError(error)
-  }
+  const resetPassword = useCallback(
+    async (email: string) => {
+      if (!supabase) return { error: new Error("Supabase client not initialized") }
 
-  // Create the context value
-  const value = {
-    user,
-    session,
-    isLoading,
-    error,
-    plan,
-    signIn,
-    signUp,
-    signOut,
-    resetPassword,
-    updateUser,
-    setAuthError,
-  }
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/reset-password`,
+        })
+
+        return { error }
+      } catch (error) {
+        console.error("Reset password error:", error)
+        return { error: error as Error }
+      }
+    },
+    [supabase],
+  )
+
+  const updatePassword = useCallback(
+    async (password: string) => {
+      if (!supabase) return { error: new Error("Supabase client not initialized") }
+
+      try {
+        const { data, error } = await supabase.auth.updateUser({
+          password,
+        })
+
+        if (data?.user) {
+          setUser(data.user)
+        }
+
+        return { error }
+      } catch (error) {
+        console.error("Update password error:", error)
+        return { error: error as Error }
+      }
+    },
+    [supabase],
+  )
+
+  const updateProfile = useCallback(
+    async (data: { fullName?: string; avatarUrl?: string }) => {
+      if (!supabase) return { error: new Error("Supabase client not initialized") }
+
+      try {
+        const { data: userData, error } = await supabase.auth.updateUser({
+          data: {
+            full_name: data.fullName,
+            avatar_url: data.avatarUrl,
+          },
+        })
+
+        if (userData?.user) {
+          setUser(userData.user)
+        }
+
+        return { error }
+      } catch (error) {
+        console.error("Update profile error:", error)
+        return { error: error as Error }
+      }
+    },
+    [supabase],
+  )
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const value = useMemo(
+    () => ({
+      user,
+      session,
+      isLoading,
+      supabase,
+      signIn,
+      signUp,
+      signOut,
+      resetPassword,
+      updatePassword,
+      updateProfile,
+    }),
+    [user, session, isLoading, supabase, signIn, signUp, signOut, resetPassword, updatePassword, updateProfile],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-// Create a hook to use the auth context
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext)
 
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    console.warn("useAuth must be used within an AuthProvider")
+    // Return a default value instead of throwing an error
+    return {
+      user: null,
+      session: null,
+      isLoading: true,
+      supabase: null,
+      signIn: async () => ({ error: new Error("Auth context not available") }),
+      signUp: async () => ({ error: new Error("Auth context not available") }),
+      signOut: async () => {},
+      resetPassword: async () => ({ error: new Error("Auth context not available") }),
+      updatePassword: async () => ({ error: new Error("Auth context not available") }),
+      updateProfile: async () => ({ error: new Error("Auth context not available") }),
+    }
   }
 
   return context

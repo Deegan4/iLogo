@@ -11,28 +11,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
-import { PasswordStrengthChecker } from "./password-strength-checker"
 
-interface SignUpFormProps {
-  onSuccess?: () => void
-}
-
-export function SignUpForm({ onSuccess }: SignUpFormProps) {
+export function SignUpForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [fullName, setFullName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [passwordError, setPasswordError] = useState<string | null>(null)
-  const [isPasswordValid, setIsPasswordValid] = useState(false)
   const { signUp } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-
-  const handlePasswordValidationChange = (isValid: boolean, message?: string) => {
-    setIsPasswordValid(isValid)
-    setPasswordError(message || null)
-  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -49,43 +37,15 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
       return
     }
 
-    // Check if password is valid according to our strength checker
-    if (!isPasswordValid) {
-      toast({
-        variant: "destructive",
-        title: "Password is not secure enough",
-        description: passwordError || "Please choose a stronger password.",
-      })
-      setIsLoading(false)
-      return
-    }
-
     try {
       const { error } = await signUp(email, password, { fullName })
 
       if (error) {
-        // Check for compromised password error from Supabase
-        if (
-          error.message?.includes("been pwned") ||
-          error.message?.includes("compromised") ||
-          error.message?.includes("breach")
-        ) {
-          setPasswordError(
-            "This password has been found in a data breach. Please choose a different password for your security.",
-          )
-          toast({
-            variant: "destructive",
-            title: "Compromised password",
-            description: "Please choose a different password for your security.",
-          })
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Sign up failed",
-            description: error.message || "Please check your information and try again.",
-          })
-        }
-        setIsLoading(false)
+        toast({
+          variant: "destructive",
+          title: "Sign up failed",
+          description: error.message || "Please check your information and try again.",
+        })
         return
       }
 
@@ -95,13 +55,8 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
         description: "Please check your email to verify your account.",
       })
 
-      // Call onSuccess if provided
-      if (onSuccess) {
-        onSuccess()
-      } else {
-        // Redirect to sign-in page or confirmation page
-        router.push("/auth/verification-sent")
-      }
+      // Redirect to sign-in page or confirmation page
+      router.push("/auth/verification-sent")
     } catch (error) {
       toast({
         variant: "destructive",
@@ -157,11 +112,6 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             required
             disabled={isLoading}
           />
-
-          {/* Password strength checker */}
-          {password.length > 0 && (
-            <PasswordStrengthChecker password={password} onValidationChange={handlePasswordValidationChange} />
-          )}
         </div>
 
         <div className="space-y-2">

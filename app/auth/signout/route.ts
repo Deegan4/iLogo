@@ -5,7 +5,10 @@ import type { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
   const cookieStore = cookies()
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  const supabase = createRouteHandlerClient({
+    cookies: () => cookieStore,
+    storageKey: "ilogo-auth-storage",
+  })
 
   // Sign out the user
   await supabase.auth.signOut()
