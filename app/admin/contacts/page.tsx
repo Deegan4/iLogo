@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { ContactsList } from "@/components/admin/contacts-list"
 
+// Fix: Use hyphen instead of underscore
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Contact Submissions | Admin | iLogo",
   description: "Manage contact form submissions",
