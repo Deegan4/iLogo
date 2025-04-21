@@ -4,8 +4,10 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button-custom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle, Loader2 } from "lucide-react"
 
-export default function ApiTestPage() {
+export default function ApiDebugPage() {
   const [response, setResponse] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [rawResponse, setRawResponse] = useState<string | null>(null)
@@ -18,7 +20,15 @@ export default function ApiTestPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
 
-  const testApi = async () => {
+  const testRegularApi = async () => {
+    await testApi("/api/collections")
+  }
+
+  const testDebugApi = async () => {
+    await testApi("/api/debug/collections")
+  }
+
+  const testApi = async (endpoint: string) => {
     setIsLoading(true)
     setError(null)
     setResponse(null)
@@ -31,7 +41,7 @@ export default function ApiTestPage() {
     try {
       // Add a cache-busting parameter
       const timestamp = new Date().getTime()
-      const res = await fetch(`/api/collections?t=${timestamp}`, {
+      const res = await fetch(`${endpoint}?t=${timestamp}`, {
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
           Pragma: "no-cache",
@@ -87,13 +97,30 @@ export default function ApiTestPage() {
 
   return (
     <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-4">API Test Page</h1>
+      <h1 className="text-2xl font-bold mb-4">API Debug Page</h1>
+      <p className="text-muted-foreground mb-6">
+        Use this page to test and debug API endpoints. This will help identify issues with JSON parsing and response
+        formatting.
+      </p>
 
-      <div className="mb-4">
-        <Button onClick={testApi} disabled={isLoading}>
-          {isLoading ? "Testing..." : "Test Collections API"}
+      <div className="flex gap-4 mb-6">
+        <Button onClick={testRegularApi} disabled={isLoading}>
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Test Regular Collections API
+        </Button>
+        <Button onClick={testDebugApi} disabled={isLoading} variant="outline">
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Test Debug Collections API
         </Button>
       </div>
+
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="raw" className="mt-6">
         <TabsList>
@@ -103,17 +130,6 @@ export default function ApiTestPage() {
         </TabsList>
 
         <TabsContent value="raw">
-          {error && (
-            <Card className="mb-4 border-red-500">
-              <CardHeader>
-                <CardTitle className="text-red-500">Error</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-red-50 p-4 rounded overflow-auto text-red-800 text-sm">{error}</pre>
-              </CardContent>
-            </Card>
-          )}
-
           {rawResponse && (
             <Card>
               <CardHeader>
@@ -126,19 +142,19 @@ export default function ApiTestPage() {
                 <div className="mb-2">
                   <strong>First 20 characters:</strong> "{rawResponse.substring(0, 20)}..."
                 </div>
-                <div className="mb-2">
+                <div className="mb-4">
                   <strong>Character codes of first 10 characters:</strong>
-                  <ul className="list-disc pl-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mt-2">
                     {Array.from(rawResponse.substring(0, 10)).map((char, i) => (
-                      <li key={i}>
-                        Position {i}: "{char}" (ASCII: {char.charCodeAt(0)})
-                      </li>
+                      <div key={i} className="bg-muted p-2 rounded text-sm">
+                        Pos {i}: "{char}" (ASCII: {char.charCodeAt(0)})
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
                 <details>
-                  <summary className="cursor-pointer text-blue-500 hover:text-blue-700">View Full Raw Response</summary>
-                  <pre className="bg-gray-50 p-4 rounded overflow-auto text-sm mt-2">{rawResponse}</pre>
+                  <summary className="cursor-pointer text-primary hover:underline">View Full Raw Response</summary>
+                  <pre className="bg-muted p-4 rounded overflow-auto text-sm mt-2 max-h-96">{rawResponse}</pre>
                 </details>
               </CardContent>
             </Card>
@@ -152,7 +168,9 @@ export default function ApiTestPage() {
                 <CardTitle>Parsed Response</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className="bg-gray-50 p-4 rounded overflow-auto text-sm">{JSON.stringify(response, null, 2)}</pre>
+                <pre className="bg-muted p-4 rounded overflow-auto text-sm max-h-96">
+                  {JSON.stringify(response, null, 2)}
+                </pre>
               </CardContent>
             </Card>
           )}
@@ -167,13 +185,13 @@ export default function ApiTestPage() {
               <div className="space-y-4">
                 <div>
                   <h3 className="font-medium mb-2">Status Code</h3>
-                  <p className="bg-gray-50 p-2 rounded">{responseInfo.status || "No response yet"}</p>
+                  <p className="bg-muted p-2 rounded">{responseInfo.status || "No response yet"}</p>
                 </div>
 
                 {responseInfo.headers && (
                   <div>
                     <h3 className="font-medium mb-2">Response Headers</h3>
-                    <pre className="bg-gray-50 p-4 rounded overflow-auto text-sm">
+                    <pre className="bg-muted p-4 rounded overflow-auto text-sm max-h-60">
                       {JSON.stringify(responseInfo.headers, null, 2)}
                     </pre>
                   </div>
@@ -181,7 +199,7 @@ export default function ApiTestPage() {
 
                 <div>
                   <h3 className="font-medium mb-2">Request Information</h3>
-                  <pre className="bg-gray-50 p-4 rounded overflow-auto text-sm">
+                  <pre className="bg-muted p-4 rounded overflow-auto text-sm">
                     {JSON.stringify(
                       {
                         url: `/api/collections?t=${new Date().getTime()}`,

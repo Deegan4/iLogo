@@ -14,6 +14,27 @@ export function safeJsonStringify(obj: any, indent: number | null = null): strin
         }
         seen.add(value)
       }
+
+      // Handle special cases that might cause JSON serialization issues
+      if (value instanceof Date) {
+        return value.toISOString()
+      }
+
+      // Handle BigInt (if present)
+      if (typeof value === "bigint") {
+        return value.toString()
+      }
+
+      // Handle functions (if present)
+      if (typeof value === "function") {
+        return undefined
+      }
+
+      // Handle undefined values
+      if (value === undefined) {
+        return null
+      }
+
       return value
     },
     indent,
@@ -59,5 +80,44 @@ export function safeJsonParse(text: string): any {
     })
 
     throw error
+  }
+}
+
+// Add a new utility function to safely handle JSON responses
+/**
+ * Safely handles a response and returns parsed JSON
+ */
+export async function safeHandleResponse(response: Response): Promise<any> {
+  try {
+    // Check if response is OK
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`API error (${response.status}):`, errorText)
+
+      // Try to parse error as JSON if possible
+      try {
+        return JSON.parse(errorText.trim())
+      } catch (e) {
+        // If not JSON, return a structured error
+        return {
+          error: `API error: ${response.status} ${response.statusText}`,
+          details: errorText,
+        }
+      }
+    }
+
+    // Get the response text
+    const text = await response.text()
+
+    // If empty response, return empty object
+    if (!text.trim()) {
+      return {}
+    }
+
+    // Try to parse as JSON
+    return JSON.parse(text.trim())
+  } catch (error) {
+    console.error("Response handling error:", error)
+    throw new Error(`Failed to handle API response: ${error instanceof Error ? error.message : String(error)}`)
   }
 }

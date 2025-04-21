@@ -6,8 +6,9 @@ import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button-custom"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { PLAN_LIMITS } from "@/lib/usage-limits"
+import { PLAN_LIMITS, type PlanType } from "@/lib/usage-limits"
 import { CheckCircle2 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface PricingDialogProps {
   open: boolean
@@ -17,10 +18,11 @@ interface PricingDialogProps {
 export function PricingDialog({ open, onOpenChange }: PricingDialogProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
-  const handleSelectPlan = (plan: string) => {
+  const handleSelectPlan = (plan: PlanType) => {
     if (!user) {
       toast({
         title: "Sign in required",
@@ -47,6 +49,7 @@ export function PricingDialog({ open, onOpenChange }: PricingDialogProps) {
       })
 
       onOpenChange(false)
+      router.push("/dashboard") // Redirect to dashboard after upgrade
     } catch (error) {
       toast({
         variant: "destructive",
@@ -102,7 +105,7 @@ export function PricingDialog({ open, onOpenChange }: PricingDialogProps) {
                 <Button
                   className="w-full"
                   variant={key === "free" ? "outline" : "default"}
-                  onClick={() => handleSelectPlan(key)}
+                  onClick={() => handleSelectPlan(key as PlanType)}
                   disabled={isLoading}
                 >
                   {key === "free" ? "Current Plan" : "Select Plan"}

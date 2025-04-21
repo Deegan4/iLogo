@@ -4,9 +4,21 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { Button } from "@/components/ui/button-custom"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { LogIn, User, Settings, LogOut, ChevronDown } from "lucide-react"
+import { AuthDialog } from "@/components/auth/auth-dialog"
 
 export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false)
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const { user, signOut, isLoading } = useAuth()
   const router = useRouter()
 
@@ -22,57 +34,72 @@ export function UserMenu() {
 
   if (!user) {
     return (
-      <Link
-        href="/auth/signin"
-        className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        Sign In
-      </Link>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => setAuthDialogOpen(true)} className="flex items-center gap-2">
+          <LogIn className="h-4 w-4" />
+          <span className="hidden sm:inline">Sign In</span>
+        </Button>
+
+        <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
+      </div>
     )
+  }
+
+  // Get user initials for avatar fallback
+  const getInitials = () => {
+    if (!user.email) return "U"
+    return user.email[0].toUpperCase()
+  }
+
+  // Get user display name
+  const getDisplayName = () => {
+    if (user.user_metadata?.full_name) return user.user_metadata.full_name
+    if (user.user_metadata?.name) return user.user_metadata.name
+    return user.email
   }
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
-        aria-expanded={isOpen}
-      >
-        {user.email?.[0].toUpperCase() || "U"}
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 rounded-md bg-background shadow-lg ring-1 ring-black ring-opacity-5">
-          <div className="py-1" role="menu" aria-orientation="vertical">
-            <div className="px-4 py-2 text-sm text-muted-foreground">{user.email}</div>
-            <div className="border-t border-border"></div>
-            <Link
-              href="/dashboard"
-              className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
-              onClick={() => setIsOpen(false)}
-              role="menuitem"
-            >
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="flex items-center gap-2 p-1 px-2 rounded-full hover:bg-muted">
+            <Avatar className="h-8 w-8">
+              {user.user_metadata?.avatar_url && (
+                <AvatarImage src={user.user_metadata.avatar_url || "/placeholder.svg"} alt={getDisplayName()} />
+              )}
+              <AvatarFallback>{getInitials()}</AvatarFallback>
+            </Avatar>
+            <span className="text-sm font-medium hidden sm:inline-block max-w-[100px] truncate">
+              {getDisplayName()}
+            </span>
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <div className="px-2 py-1.5 text-sm font-medium">
+            <div className="truncate">{getDisplayName()}</div>
+            <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard" className="cursor-pointer flex items-center">
+              <User className="mr-2 h-4 w-4" />
               Dashboard
             </Link>
-            <Link
-              href="/profile"
-              className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
-              onClick={() => setIsOpen(false)}
-              role="menuitem"
-            >
-              Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/profile" className="cursor-pointer flex items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              Profile Settings
             </Link>
-            <div className="border-t border-border"></div>
-            <button
-              onClick={handleSignOut}
-              className="block w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted"
-              role="menuitem"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      )}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-500 focus:text-red-500">
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

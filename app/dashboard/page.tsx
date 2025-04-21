@@ -41,8 +41,21 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [errorDetails, setErrorDetails] = useState<string | null>(null)
+  const [responseDebug, setResponseDebug] = useState<{
+    raw: string | null
+    status: number | null
+    headers: Record<string, string> | null
+  }>({
+    raw: null,
+    status: null,
+    headers: null,
+  })
 
   const fetchCollections = async () => {
+    let errorMessage = null
+    let details = null
+    let responseText = null
+
     if (!user) {
       if (!isAuthLoading) {
         setError("Please sign in to view your dashboard")
@@ -53,6 +66,11 @@ export default function DashboardPage() {
     setIsLoading(true)
     setError(null)
     setErrorDetails(null)
+    setResponseDebug({
+      raw: null,
+      status: null,
+      headers: null,
+    })
 
     try {
       // Add a cache-busting parameter to prevent caching issues
@@ -62,25 +80,42 @@ export default function DashboardPage() {
           "Cache-Control": "no-cache, no-store, must-revalidate",
           Pragma: "no-cache",
           Expires: "0",
+          Accept: "application/json",
+          "Content-Type": "application/json",
         },
       })
 
-      // Log the raw response for debugging
-      const responseText = await response.clone().text()
+      // Store response status and headers for debugging
+      setResponseDebug((prev) => ({
+        ...prev,
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+      }))
+
+      // Get the raw response text for debugging
+      responseText = await response.text()
       console.log("Raw API response:", responseText)
 
+      // Store the raw response for debugging
+      setResponseDebug((prev) => ({
+        ...prev,
+        raw: responseText,
+      }))
+
       if (!response.ok) {
-        let errorMessage = `API error: ${response.status} ${response.statusText}`
-        let details = null
+        errorMessage = `API error: ${response.status} ${response.statusText}`
+        details = null
 
         try {
           // Try to parse the error response as JSON
-          const errorData = JSON.parse(responseText)
-          if (errorData.error) {
-            errorMessage = errorData.error
-          }
-          if (errorData.details) {
-            details = errorData.details
+          if (responseText.trim()) {
+            const errorData = JSON.parse(responseText.trim())
+            if (errorData.error) {
+              errorMessage = errorData.error
+            }
+            if (errorData.details) {
+              details = errorData.details
+            }
           }
         } catch (parseError) {
           console.error("Error parsing error response:", parseError)
@@ -97,11 +132,29 @@ export default function DashboardPage() {
 
       // Parse the successful response
       try {
-        const data = JSON.parse(responseText) as CollectionsResponse
+        // First check if the response is empty
+        if (!responseText.trim()) {
+          throw new Error("Empty response from server")
+        }
+
+        // Now try to parse the JSON
+        const data = JSON.parse(responseText.trim()) as CollectionsResponse
+
+        // Validate the response structure
+        if (!data || typeof data !== "object") {
+          throw new Error("Invalid response format: not an object")
+        }
+
+        if (!Array.isArray(data.collections)) {
+          throw new Error("Invalid response format: collections is not an array")
+        }
+
         setCollections(data.collections || [])
       } catch (parseError) {
         console.error("Error parsing success response:", parseError)
-        setError("Failed to parse server response")
+        setError(
+          `Failed to parse server response: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+        )
         setErrorDetails("Response was not valid JSON: " + responseText.substring(0, 100) + "...")
       }
     } catch (err) {
@@ -113,9 +166,7 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    if (!isAuthLoading) {
-      fetchCollections()
-    }
+    fetchCollections()
   }, [user, isAuthLoading])
 
   const handleRetry = () => {
@@ -200,11 +251,17 @@ export default function DashboardPage() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <Button asChild>
-          <Link href="/create">
-            <Plus className="mr-2 h-4 w-4" /> Create New Logo
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRetry} disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Button asChild>
+            <Link href="/create">
+              <Plus className="mr-2 h-4 w-4" /> Create New Logo
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Show error state if there's an error */}
@@ -215,6 +272,52 @@ export default function DashboardPage() {
           <AlertDescription className="space-y-2">
             <p>{error}</p>
             {errorDetails && <p className="text-sm opacity-80">Details: {errorDetails}</p>}
+
+            {/* Debug information */}
+            {responseDebug.raw && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm font-medium">Debug Information</summary>
+                <div className="mt-2 text-xs">
+                  <p>
+                    <strong>Status:</strong> {responseDebug.status}
+                  </p>
+
+                  {responseDebug.headers && (
+                    <div className="mt-1">
+                      <p>
+                        <strong>Headers:</strong>
+                      </p>
+                      <pre className="bg-black/10 p-2 rounded mt-1 overflow-auto max-h-32">
+                        {JSON.stringify(responseDebug.headers, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  <div className="mt-1">
+                    <p>
+                      <strong>Raw Response:</strong>
+                    </p>
+                    <pre className="bg-black/10 p-2 rounded mt-1 overflow-auto max-h-32">
+                      {responseDebug.raw.substring(0, 500)}
+                      {responseDebug.raw.length > 500 ? "..." : ""}
+                    </pre>
+                  </div>
+
+                  <div className="mt-1">
+                    <p>
+                      <strong>First 10 characters (ASCII codes):</strong>
+                    </p>
+                    <pre className="bg-black/10 p-2 rounded mt-1 overflow-auto">
+                      {Array.from(responseDebug.raw.substring(0, 10)).map(
+                        (char, i) => `Pos ${i}: "${char}" (${char.charCodeAt(0)})
+`,
+                      )}
+                    </pre>
+                  </div>
+                </div>
+              </details>
+            )}
+
             <Button variant="outline" size="sm" onClick={handleRetry} className="mt-2">
               <RefreshCw className="mr-2 h-4 w-4" /> Retry
             </Button>
@@ -290,6 +393,22 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mt-6">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Debugging Tools</AlertTitle>
+          <AlertDescription>
+            If you're experiencing issues with the dashboard, you can use our debugging tools to help identify the
+            problem.
+            <div className="mt-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/api-debug">API Debugging Page</Link>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       </div>
     </div>
   )

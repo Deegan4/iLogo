@@ -1,9 +1,9 @@
 // Add the dynamic directive to ensure this page is rendered at request time
 export const dynamic = "force-dynamic"
 
-import { SignUpForm } from "@/components/auth/sign-up-form"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { AuthTabs } from "@/components/auth/auth-tabs"
 
 export default async function SignUpPage() {
   // Check if user is already signed in
@@ -17,5 +17,9 @@ export default async function SignUpPage() {
     redirect("/dashboard")
   }
 
-  return <SignUpForm />
+  return (
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <AuthTabs defaultTab="signup" />
+    </div>
+  )
 }

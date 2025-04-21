@@ -1,11 +1,16 @@
-// Add the dynamic directive to ensure this page is rendered at request time
-export const dynamic = "force-dynamic"
-
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import { EnhancedSignInForm } from "@/components/auth/enhanced-sign-in-form"
+import { AuthTabs } from "@/components/auth/auth-tabs"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
-export default async function SignInPage() {
+export const dynamic = "force-dynamic"
+
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: { error?: string; redirectTo?: string }
+}) {
   // Check if user is already signed in
   const supabase = createClient()
   const {
@@ -17,9 +22,20 @@ export default async function SignInPage() {
     redirect("/dashboard")
   }
 
+  const error = searchParams.error
+  const redirectTo = searchParams.redirectTo
+
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
-      <EnhancedSignInForm />
+      {error && (
+        <Alert variant="destructive" className="mb-6 max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Authentication Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <AuthTabs defaultTab="signin" redirectUrl={redirectTo} />
     </div>
   )
 }

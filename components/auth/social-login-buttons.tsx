@@ -1,6 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
+import { Loader2 } from "lucide-react"
 
 interface SocialLoginButtonsProps {
   onGoogleClick: () => void
@@ -18,23 +20,12 @@ export function SocialLoginButtons({ onGoogleClick, onGithubClick, isLoading = f
         onClick={onGoogleClick}
         className="flex items-center justify-center gap-2"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-4 w-4"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 8v8" />
-          <path d="M8 12h8" />
-        </svg>
-        Google
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Image src="/images/google-logo.svg" alt="Google" width={16} height={16} />
+        )}
+        Continue with Google
       </Button>
       <Button
         variant="outline"

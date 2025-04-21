@@ -12,9 +12,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Loader2, Eye, EyeOff } from "lucide-react"
+import { AlertCircle, ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react"
 
-export function EnhancedSignInForm() {
+interface EnhancedSignInFormProps {
+  redirectUrl?: string
+  onSuccess?: () => void
+  onBack?: () => void
+}
+
+export function EnhancedSignInForm({ redirectUrl, onSuccess, onBack }: EnhancedSignInFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
@@ -49,7 +55,7 @@ export function EnhancedSignInForm() {
       }
 
       // Attempt to sign in
-      const { error: signInError } = await signIn(email, password)
+      const { data, error: signInError } = await signIn(email, password)
 
       if (signInError) {
         console.error("Sign in error:", signInError)
@@ -71,7 +77,14 @@ export function EnhancedSignInForm() {
         description: "Welcome back!",
       })
 
-      router.push("/dashboard")
+      // Store the session in local storage
+      localStorage.setItem("supabase.auth.session", JSON.stringify(data?.session))
+
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        router.push(redirectUrl || "/dashboard")
+      }
     } catch (err) {
       console.error("Unexpected sign in error:", err)
       setError("An unexpected error occurred. Please try again later.")
@@ -82,6 +95,13 @@ export function EnhancedSignInForm() {
 
   return (
     <div className="space-y-6">
+      {onBack && (
+        <Button type="button" variant="ghost" onClick={onBack} className="flex items-center gap-2 p-0 mb-4">
+          <ArrowLeft className="h-4 w-4" />
+          Back to all sign in options
+        </Button>
+      )}
+
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Sign In</h1>
         <p className="text-sm text-muted-foreground">Enter your email and password to sign in</p>
@@ -197,13 +217,6 @@ export function EnhancedSignInForm() {
           </p>
         </div>
       )}
-
-      <div className="text-center text-sm">
-        Don&apos;t have an account?{" "}
-        <Link href="/auth/signup" className="font-medium text-primary underline-offset-4 hover:underline">
-          Sign up
-        </Link>
-      </div>
     </div>
   )
 }
